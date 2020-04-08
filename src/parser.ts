@@ -5,7 +5,7 @@ export function parseDoc(str: string) {
 
     var imports = parseForImports(str, []);
     //console.log(imports);
-    var processedImports = processImports(imports);
+    var processedImports = processImports(imports);gi
     //console.log(processedImports);
   
     var myClass = parseForClass(str, "App");
