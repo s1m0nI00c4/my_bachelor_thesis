@@ -1,11 +1,24 @@
 import {processImports, processRoutes} from "./processor";
 import * as Helper from "./helper";
+import * as vscode from 'vscode';
+import { TextDecoder } from 'util';
 
-export function parseDoc(str: string) {
+interface Node {
+  id: number;
+  name: string;
+  content: string;
+  type: string;
+  children?: Node[];
+  origin?: string;
+  follow?: boolean;
+  blob?: string;
+}
+
+export async function parseDoc(str: string) {
 
     var imports = parseForImports(str, []);
     //console.log(imports);
-    var processedImports = processImports(imports);gi
+    var processedImports = processImports(imports);
     //console.log(processedImports);
   
     var myClass = parseForClass(str, "App");
@@ -18,9 +31,55 @@ export function parseDoc(str: string) {
     var componentsToFollow = followComponents(myComponents, processedImports);
     //console.log(componentsToFollow);
     var withNavigation = internalNavigation(componentsToFollow, myConsts);
-    console.log(withNavigation);
+    var withNavigation2 = followComponents(withNavigation, processedImports);
+    //console.log(withNavigation2);
+    var allResources = await findResources(withNavigation2);
+    //console.log(allResources);
+    //var openedResources = await openResources(allResources);
+    //console.log(openedResources);
+    /*for (var resource in allResources) {
+      if (resource.blob) {
+        resource.children = parseDoc(resource.blob);
+      }
+    }*/
+    return allResources;
 
   
+}
+
+async function findResources(components: {id: number, name: string, content: string, type: string, children?: any[], origin?: string, follow?: boolean, blob?: string}[]) {
+  var result = components;
+  for (var item of result) {
+    if (item.origin && item.follow===true) {
+      item.blob = await openResources(item.origin);
+    }
+    if (item.children) {
+      item.children = await findResources(item.children);
+    }
+  }
+  return result;
+}
+
+async function openResources(resource: string) {
+  var result: string = "";
+  var patt1 = /\/\w+.js/;
+  var obj1 = patt1.exec(resource);
+     if (obj1) {
+      var smt = await contentReader(obj1[0]);
+      result = smt;
+     }
+
+  return result;
+}
+
+async function contentReader(filename: String) {
+
+  var decoder = new TextDecoder('utf-8');
+  var result = vscode.workspace.findFiles("**" + filename, '**/node_modules/**', 10)
+        .then(result1 => vscode.workspace.fs.readFile(result1[0]))
+        .then(result2 => decoder.decode(result2))
+  return result;
+
 }
 
 

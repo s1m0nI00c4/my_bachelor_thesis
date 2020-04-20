@@ -12,7 +12,8 @@ export function activate(context: vscode.ExtensionContext) {
 
       vscode.workspace.findFiles('**/App.js', '**/node_modules/**', 10)
       .then(result1 => vscode.workspace.fs.readFile(result1[0]))
-      .then(result2 => parseDoc(decoder.decode(result2)));
+      .then(result2 => parseDoc(decoder.decode(result2)))
+      .then(result3 => console.log(result3))
       /*.then(result2 => parseForImports(decoder.decode(result2), []))
       .then(result2 => parseForClass(decoder.decode(result2), "App"))
       .then(result3 => parseForRender(result3))
