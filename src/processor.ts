@@ -1,7 +1,9 @@
+import {Dependencies} from './parser';
+
 /* This function takes an array of imports and classifies them according to their name and properties, returning another array with these additional info*/
-export function processImports(arr: { name: string; origin: string; all: boolean; }[]) {
+export function processImports(arr: Dependencies[]): Dependencies[] {
  
-  var result: { name: string; origin: string; all: boolean; follow?: boolean; type?: string }[] = arr;
+  var result: Dependencies[] = arr;
   result.forEach(item => { 
     if (item.all === true) {
       item.follow = true;

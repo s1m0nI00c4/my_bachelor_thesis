@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { TextDecoder } from 'util';
 import { stringify } from 'querystring';
-import {parseDoc} from './parser';
+import {parseDoc, repeatParseDoc} from './parser';
 
 export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
@@ -12,12 +12,11 @@ export function activate(context: vscode.ExtensionContext) {
 
       vscode.workspace.findFiles('**/App.js', '**/node_modules/**', 10)
       .then(result1 => vscode.workspace.fs.readFile(result1[0]))
+      //.then(result2 => console.log(decoder.decode(result2)))
       .then(result2 => parseDoc(decoder.decode(result2)))
-      .then(result3 => console.log(result3))
-      /*.then(result2 => parseForImports(decoder.decode(result2), []))
-      .then(result2 => parseForClass(decoder.decode(result2), "App"))
-      .then(result3 => parseForRender(result3))
-      .then(result4 => parseForComponents(result4))*/
+      .then(result3 => repeatParseDoc(result3))
+      .then(result4 => {console.log("RESULT"); console.log(result4)})
+
 
       const panel = vscode.window.createWebviewPanel(
         'catCoding',

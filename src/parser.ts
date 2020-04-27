@@ -2,93 +2,112 @@ import {processImports, processRoutes} from "./processor";
 import * as Helper from "./helper";
 import * as vscode from 'vscode';
 import { TextDecoder } from 'util';
+import * as ResourceFinder from './resourcefinder';
 
-interface Node {
+export interface Node {
   id: number;
   name: string;
   content: string;
   type: string;
-  children?: Node[];
+  children: Node[];
   origin?: string;
   follow?: boolean;
   blob?: string;
 }
 
+export interface Dependencies {
+  name: string;
+  origin: string;
+  all: boolean;
+  follow?: boolean;
+  type?: string;
+}
+
+interface Consts {
+  name: string;
+  content: string;
+  type: string;
+}
+
+interface Exports {
+  name: string;
+  default: boolean;
+  type: string;
+  content?: string;
+}
+
 export async function parseDoc(str: string) {
 
-    var imports = parseForImports(str, []);
+    var result: Node[] = [];
+
+    var imports: Dependencies[] = parseForImports(str, []);
+    //console.log("My imports");
     //console.log(imports);
-    var processedImports = processImports(imports);
+    var processedImports: Dependencies[] = processImports(imports);
+    //console.log("My processed imports");
     //console.log(processedImports);
-  
-    var myClass = parseForClass(str, "App");
-    var myRender = parseForRender(myClass);
-    var myComponents = parseForComponents(myRender);
 
-    var myConsts = parseForConst(str);
+    var myConsts: Consts[] = parseForConst(str);
+    //console.log("My consts")
     //console.log(myConsts);
-    
-    var componentsToFollow = followComponents(myComponents, processedImports);
-    //console.log(componentsToFollow);
-    var withNavigation = internalNavigation(componentsToFollow, myConsts);
-    var withNavigation2 = followComponents(withNavigation, processedImports);
-    //console.log(withNavigation2);
-    var allResources = await findResources(withNavigation2);
-    //console.log(allResources);
-    //var openedResources = await openResources(allResources);
-    //console.log(openedResources);
-    /*for (var resource in allResources) {
-      if (resource.blob) {
-        resource.children = parseDoc(resource.blob);
+  
+    var myExports = parseForExports(str);
+    //console.log("---My Exports---");
+    //console.log(myExports);
+    var exportedComponents = retrieveExports(myExports, str);
+    //console.log("My exported Components");
+    //console.log(exportedComponents);
+    /*var myClass: string = parseForClass(str, "Login");
+    console.log("My class:");
+    console.log(myClass);*/
+    var myRender: Exports[] = parseForRender(exportedComponents);
+    //console.log("My render:")
+    //console.log(myRender);
+    if (myRender.length === 1) {
+      if (myRender[0].content) {
+      var myComponents: Node[] = parseForComponents(myRender[0].content);
+      //console.log("My Components: ")
+      //console.log(myComponents);
+      var componentsToFollow: Node[] = followComponents(myComponents, processedImports);
+      //console.log("Components to follow:")
+      //console.log(componentsToFollow);
+      var withNavigation: Node[] = internalNavigation(componentsToFollow, myConsts);
+      var withNavigation2: Node[] = followComponents(withNavigation, processedImports);
+      //console.log("With Navigation 2: ")
+      //console.log(withNavigation2);
+      var allResources: Node[] = await ResourceFinder.findResources(withNavigation2);
+      console.log("All Resources:");
+      console.log(allResources);
+      result = allResources;
       }
-    }*/
-    return allResources;
+    }
 
+    return result
   
 }
 
-async function findResources(components: {id: number, name: string, content: string, type: string, children?: any[], origin?: string, follow?: boolean, blob?: string}[]) {
-  var result = components;
-  for (var item of result) {
-    if (item.origin && item.follow===true) {
-      item.blob = await openResources(item.origin);
-    }
-    if (item.children) {
-      item.children = await findResources(item.children);
-    }
+export async function repeatParseDoc(initial: Node[]): Promise<Node[]> {
+  var result: Node[] = initial;
+   for (var item of result) {
+    if (item.blob && (!item.children || item.children.length === 0)) {
+      console.log("LEAF: " + item.name)
+
+      item.children = await parseDoc(item.blob);
+
+    } 
+    item.children = await repeatParseDoc(item.children);
   }
   return result;
-}
-
-async function openResources(resource: string) {
-  var result: string = "";
-  var patt1 = /\/\w+.js/;
-  var obj1 = patt1.exec(resource);
-     if (obj1) {
-      var smt = await contentReader(obj1[0]);
-      result = smt;
-     }
-
-  return result;
-}
-
-async function contentReader(filename: String) {
-
-  var decoder = new TextDecoder('utf-8');
-  var result = vscode.workspace.findFiles("**" + filename, '**/node_modules/**', 10)
-        .then(result1 => vscode.workspace.fs.readFile(result1[0]))
-        .then(result2 => decoder.decode(result2))
-  return result;
 
 }
 
 
-function followComponents(components: {id: number, name: string, content: string, type: string, children?: any[], origin?: string, follow?: boolean}[] | any[], imports: { name: string; origin: string; all: boolean; follow?: boolean; type?: string }[]): {id: number, name: string, content: string, type: string, children?: any[], origin?: string, follow?: boolean}[] {
+function followComponents(components: Node[], dependencies: Dependencies[]): Node[] {
 
   var result =  components;
   result?.forEach(item => {
 
-      var targetImport = imports.filter(function(elem) {return elem.name === item.name});
+      var targetImport = dependencies.filter(function(elem) {return elem.name === item.name});
       if (targetImport[0]) {
         item.origin = targetImport[0].origin;
         item.follow = targetImport[0].follow;
@@ -97,7 +116,7 @@ function followComponents(components: {id: number, name: string, content: string
         item.origin = undefined;
         item.follow = true;
       }
-      item.children = followComponents(item.children, imports); //Add children
+      item.children = followComponents(item.children, dependencies); //Add children
   })
 
   return result;
@@ -105,7 +124,7 @@ function followComponents(components: {id: number, name: string, content: string
 }
   
 /*This function that parses all 'imports' within a Javascript file, returning them in an array of strings*/
-function parseForImports(str: string, arr: Array<string>): { name: string; origin: string; all: boolean }[] {
+function parseForImports(str: string, arr: Array<string>): Dependencies[] {
   var obj = /import.*;/.exec(str);
   if (obj !== null) {
     var parsedString = obj[0];
@@ -117,8 +136,8 @@ function parseForImports(str: string, arr: Array<string>): { name: string; origi
   }
 }
   
-  function findDependencies(arr: Array<string>) {
-    var result: { name: string; origin: string; all: boolean }[] = [];
+  function findDependencies(arr: Array<string>): Dependencies[] {
+    var result: Dependencies[] = [];
     var patt1 = /import\s+/; // captures import keyword
     var patt2 = /[a-zA-Z]*\s*,\s*(\{|\*)/;  // f.e.:  "import x, {something else} from y" or "import x, * as y from z"
     var patt3 = /\w+\s+from/;  // f.e.:  import x from "y"
@@ -200,7 +219,85 @@ function parseForImports(str: string, arr: Array<string>): { name: string; origi
     return result;
   }
   
-  
+  function parseForExports(stringToParse: string) {
+    var patt1 = /(export\s*default\s*function[\s\S]*|export\s*default\s*\w+)/gm          // Find all the export default statements
+    var patt1a = /export\s*default\s*function[\s\S]*/gm
+    var patt1b = /export\s*default\s*class[\s\S]*/gm
+    var patt1c = /export\s*default\s*\w+/gm
+    var patt2 = /export\s*{[^}]*}/gm                                                      // Find all the export + parentheses statements
+    var patt3 = /export\s*\*\s*from/gm                                                    // Find the export * statement
+    var patt4 = /(export\s*let|export\s*const|export\s*var)\s*[^;]*/gm                    // Find all the export let, export var and export const statements
+
+    var result = [];
+    var obj1 = patt1a.exec(stringToParse);
+    var obj2 = patt1b.exec(stringToParse);
+    var obj3 = patt1c.exec(stringToParse);
+    if (obj1 || obj2 || obj3) {
+      if (obj1) {
+        var patt5 = /export\s*default\s*function\s*\w+/gm;
+        var obj4 = patt5.exec(obj1[0]);
+        var patt6 = /\w+/gm;
+        if (obj4) {
+          var words = obj4[0].match(patt6);
+          if (words)
+          result.push({
+            name: words[3],
+            default: true,
+            type: "Function"
+          })
+        }  
+      } else if (obj2) {
+        var patt5 = /export\s*default\s*class\s*\w+/gm;
+        var obj4 = patt5.exec(obj2[0]);
+        var patt6 = /\w+/gm;
+        if (obj4) {
+          var words = obj4[0].match(patt6);
+          if (words)
+          result.push({
+            name: words[3],
+            default: true,
+            type: "Class",
+          })
+        } 
+
+      } else if (obj3) {
+        var patt5 = /export\s*default\s*\w+/gm;
+        var obj4 = patt5.exec(obj3[0]);
+        var patt6 = /\w+/gm;
+        if (obj4) {
+          var words = obj4[0].match(patt6);
+          if (words)
+          result.push({
+            name: words[2],
+            default: true,
+            type: "Expression",
+          })
+        }
+
+      }
+    }
+
+    return result;
+
+  }
+
+  function retrieveExports(exports: Exports[], stringToParse:string) {
+
+    var result: Exports[] = exports;
+    result.forEach(item => {
+      if (item.type === "Expression") {
+        var regex = new RegExp("const " + item.name + "[\\s\\S]*");
+        var obj = stringToParse.match(regex);
+        if (obj) {
+          item.content = obj[0]
+        }  
+      } 
+      else if (item.type === "Class") {
+        item.content = parseForClass(stringToParse, item.name);
+      }
+    })
+    return result;
+  }
   
   /*This function parses a Javascript file for a specific class, returning it if successful*/
   function parseForClass(stringToParse: string, className:string) {
@@ -214,33 +311,51 @@ function parseForImports(str: string, arr: Array<string>): { name: string; origi
   
   /*This function parses a Javascript Class for its render() method*/
   
-  function parseForRender(stringToParse: string) {
-    var result = "";
-    var regex = new RegExp("render()[\\s\\S]*return[\\s\\S]*");
-    var obj = stringToParse.match(regex);
-    if (obj) {
-      const newStringToParse = Helper.balancedParentheses(obj[0], "{");
-      regex = new RegExp("return[\\s\\S]*")
-      if (newStringToParse) {
-        var newObj = newStringToParse.match(regex);
-        if (newObj)
-          result = Helper.balancedParentheses(newObj[0], "(");
-      }     
-    }
+  function parseForRender(exports: Exports[]) {
+    var result: Exports[] = exports;
+    var regexC = new RegExp("render()[\\s\\S]*return[\\s\\S]*");
+    var pattExp = /return\s*\([\s\S]*/g
+    result.forEach(item => {
+      if (item.content) {
+        if (item.type === "Class") {
+          var obj = item.content.match(regexC);
+          if (obj) {
+            const newStringToParse = Helper.balancedParentheses(obj[0], "{");
+            var regex = new RegExp("return[\\s\\S]*")
+            if (newStringToParse) {
+              var newObj = newStringToParse.match(regex);
+              if (newObj)
+                item.content = Helper.balancedParentheses(newObj[0], "(");
+            }     
+          }
+        }
+        else if (item.type === "Expression") {
+          var obj = item.content.match(pattExp);
+          if (obj) {
+            item.content = Helper.balancedParentheses(obj[0], "(");
+   
+          }
+
+        }
+      }
+    })
+   
     return result;
   }
   /* This function parses all components inside a render method, puts them in the correct hierarchy and returns them as a JSON file */
-  function parseForComponents(stringToParse: string) : {id: number, name: string, content: string, type: string, children?: any[]}[] {
-    var patt1 = /(<\w+[^>]*>|<\w+ [\s\S]*\/>|<\/\w+>)/gs // Any component
+  function parseForComponents(stringToParse: string): Node[] {
+    
+    var patt1 = /(<\w+[^>]*>|<[A-Z][A-Za-z]*[^(\/>)]*\/>|<\/\w+>)/gs // Any component
     var patt2 = /<\w+[^\/>]*>/; //Opener of a wrapper
-    var patt3 = /<\w+ [^\/]*\/>/; //Standalone component
+    var patt3 = /<[A-Z][A-Za-z]*[^(\/>)]*\/>/; //Standalone component
     var patt4 = /<\/\w+>/; //Closer of a wrapper
-    var JSONResult: {id: number, name: string, content: string, type: string}[] = [];
+    var JSONResult: Node[] = [];
     var id = 0;
     var result = stringToParse.match(patt1);
     result?.forEach((item) => {
         var test1 = item.match(patt2);
         var name = item.match(/\w+/);
+        
         if (test1 && name) {
           JSONResult.push(
             {
@@ -248,6 +363,7 @@ function parseForImports(str: string, arr: Array<string>): { name: string; origi
               name: name[0],
               content: item,
               type: "Opener",
+              children: [],
             }
           );
         } else {
@@ -259,65 +375,76 @@ function parseForImports(str: string, arr: Array<string>): { name: string; origi
                 name: name[0],
                 content: item,
                 type: "Standalone",
+                children: [],
               }
             );
           } else {
-            if (name)
-            JSONResult.push(
-              {
-                id: id++,
-                name: name[0],
-                content: item,
-                type: "Closer",
-              }
-            );
+            var test3 = item.match(patt4);
+            if (name && test3) {
+              JSONResult.push(
+                {
+                  id: id++,
+                  name: name[0],
+                  content: item,
+                  type: "Closer",
+                  children: [],
+                }
+              );
+            }
           }
         }
-      });
-    return hierarchify(JSONResult);
+    });
+
+   return hierarchify(JSONResult);
+   //return JSONResult;
   }
   
   // This helper function takes a plain array of JSX Tags and, according to its rules, creates a JSON object representing the hierarchy of components
-  function hierarchify(plainArray: {id: number, name: string, content: string, type: string}[] ): {id: number, name: string, content: string, type: string, children?: any[]}[] {
-      var newArray: {id: number, name: string, content: string, type: string, children?: any[]}[]  = plainArray;
-      var result: {id: number, name: string, content: string, type: string, children?: any[]}[] = [];
-      if (newArray[0].type === "Opener") {  //In case the next element is a wrapper
-        var closerIndex = -1;
-        var i = 1;
-        var nested = 0;
-        while (i < newArray.length && closerIndex < 0) {  //Check for nested wrappers, find the matching closing tag using the "nested" index
-          if (newArray[i].type === "Opener" && newArray[i].name === newArray[0].name) {
-            nested++;
-          } else if (newArray[i].type === "Closer" && newArray[i].name === newArray[0].name) {
-            if (nested === 0) {
-              closerIndex = i;
-            } else {
-              nested--;
+  function hierarchify(plainArray: Node[] ): Node[] {
+      var newArray: Node[]  = plainArray;
+      var result: Node[] = [];
+      if (plainArray) {
+
+        var i = 0;
+        while (i < newArray.length) {
+          if (newArray[i].type === "Opener") {
+            var openers = 1;
+            var closers = 0;
+            var cc  = i+1;  //cc = Current Considered
+            while (cc < newArray.length && openers != closers) {
+              if (newArray[cc].type === "Closer") {
+                ++closers;
+              } else if (newArray[cc].type === "Opener") {
+                ++openers;
+              }
+              //console.log("Values are = openers: " + openers + "; closers: " + closers + "; cc: " + cc + ". Current cc: " + newArray[cc].name + " - " + newArray[cc].type)
+              cc = cc +1;
             }
+            newArray[i].children = hierarchify(newArray.slice(i+1, cc-1));
+            result.push(newArray[i]);
+            i = cc;
+
+          } else if (newArray[i].type === "Standalone") {
+            result.push(newArray[i]);
+            ++i;
+
+          } else {
+            console.log("CLOSER");
+            ++i;
           }
-          i++;
         }
-        newArray[0].children = hierarchify(newArray.slice(1, closerIndex)); // Recursively hierarchify all elements inside the wrapper and set them as its children
-        result.push(newArray[0]); // Hierarchify remaining elements after this one, if present
-        if (newArray.length > closerIndex+1) {
-          result.concat(hierarchify(newArray.slice(closerIndex+1)));
-        }
-      } else {  // In case the next element is a standalone
-        newArray[0].children = [];  // Standalone elements are childless!
-        result.push(newArray[0]);
-        if (newArray.length > 1) {  // Hierarchify remaining elements after this one, if present
-          result.concat(hierarchify(newArray.slice(1)));
-        }
+
       }
+      
       return result;
   }
-function parseForConst(str: string) {
+function parseForConst(str: string): Consts[] {
 
   var patt1 = /const\s*\w+\s*=\s*(createAppContainer|createSwitchNavigator|createBottomTabNavigator|createStackNavigator)\s*\([^\)]*\)/g //Catches a navigation component
   var patt2 = /const\s*\w+\s*=\s*{[^}]*}/g //Catches an object, usually a route
   var patt3 = /const\s*\w+\s*=\s*\([^)]*\)\s*=>\s*/g // Catches functional components (but NOT what's in their parentheses, just the header)
-  var patt4 = /\w+/
-  var result: any[] = [];
+  var patt4 = /\w+/ // Catches the first word.
+  var result: Consts[] = [];
   var obj1 = str.match(patt1);
   if (obj1) { // Looks for navigation components, extracts their name and the first argument (routes)
     obj1.forEach(item => {
@@ -363,7 +490,7 @@ function parseForConst(str: string) {
   return result;
 }
 
-function internalNavigation(components: {id: number, name: string, content: string, type: string, children?: any[], origin?: string, follow?: boolean}[] | any[], consts: {name: string, content: string, type: string}[]) {
+function internalNavigation(components: Node[] | any[], consts: Consts[]): Node[] {
 var navs = consts.filter( function(item) {if (item.type==="Navigation component") return item}) // Filters out all navigation components produced
 var routes = consts.filter( function(item) {if (item.type==="General object") return item}) // Filters out all possible routes objects encountered
 var result = components;
@@ -402,6 +529,3 @@ result.forEach(item => {
 return result;
 
 }
-
-
-
