@@ -346,9 +346,9 @@ function parseForImports(str: string, arr: Array<string>): Dependencies[] {
   /* This function parses all components inside a render method, puts them in the correct hierarchy and returns them as a JSON file */
   function parseForComponents(stringToParse: string): Node[] {
     
-    var patt1 = /(<\w+[^(\/>)]*>|<[A-Z][A-Za-z]*[^\/]*\/>|<\/\w+>)/gs // Any component
-    var patt2 = /<\w+[^(\/>)]*>/; //Opener of a wrapper
-    var patt3 = /<[A-Z][A-Za-z]*[^\/]*\/>/; //Standalone component
+    var patt1 = /(<\w+[^>]*>|<[A-Z][A-Za-z]*[^(\/>)]*\/>|<\/\w+>)/gs // Any component 
+    var patt2 = /<\w+[^\/>]*>/; //Opener of a wrapper
+    var patt3 = /<[A-Z][A-Za-z]*[^(\/>)]*\/>/; //Standalone component
     var patt4 = /<\/\w+>/; //Closer of a wrapper
     var JSONResult: Node[] = [];
     var id = 0;

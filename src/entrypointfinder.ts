@@ -32,11 +32,11 @@ async function entryPointExpo(app: string) :Promise<string> {
 
 async function entryPointGeneric(app: string) :Promise<string> {
 
-    /*var decoder = new TextDecoder('utf-8');
+    var decoder = new TextDecoder('utf-8');
 
     return vscode.workspace.findFiles(app, '**/node_modules/**', 10)
     .then(result1 => vscode.workspace.fs.readFile(result1[0]))
-    .then(result2 => decoder.decode(result2))*/
+    .then(result2 => decoder.decode(result2))
 
 }
 
