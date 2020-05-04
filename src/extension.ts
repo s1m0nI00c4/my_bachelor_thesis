@@ -3,14 +3,15 @@ import * as path from 'path';
 import { TextDecoder } from 'util';
 import { stringify } from 'querystring';
 import {parseDoc, repeatParseDoc} from './parser';
+import {findEntryPoint} from './entrypointfinder';
 
 export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
-    vscode.commands.registerCommand('catCoding.start', () => {
+    vscode.commands.registerCommand('catCoding.start', async () => {
 
       var decoder = new TextDecoder('utf-8');
 
-      vscode.workspace.findFiles('**/App.js', '**/node_modules/**', 10)
+      vscode.workspace.findFiles("**/App.js", '**/node_modules/**', 10)
       .then(result1 => vscode.workspace.fs.readFile(result1[0]))
       //.then(result2 => console.log(decoder.decode(result2)))
       .then(result2 => parseDoc(decoder.decode(result2)))

@@ -22,6 +22,13 @@ export async function openResources(resource: string) {
     if (obj1) {
       var smt = await contentReader(obj1[0]);
       result = smt;
+    } else {
+      var newResource = resource + ".js";
+      var obj2 = patt1.exec(newResource);
+      if (obj2) {
+        var smt = await contentReader(obj2[0]);
+        result = smt;
+      }
     }
   return result;
 }

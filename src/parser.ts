@@ -76,8 +76,8 @@ export async function parseDoc(str: string) {
       //console.log("With Navigation 2: ")
       //console.log(withNavigation2);
       var allResources: Node[] = await ResourceFinder.findResources(withNavigation2);
-      console.log("All Resources:");
-      console.log(allResources);
+      //console.log("All Resources:");
+      //console.log(allResources);
       result = allResources;
       }
     }
@@ -90,9 +90,10 @@ export async function repeatParseDoc(initial: Node[]): Promise<Node[]> {
   var result: Node[] = initial;
    for (var item of result) {
     if (item.blob && (!item.children || item.children.length === 0)) {
-      console.log("LEAF: " + item.name)
+      //console.log("LEAF: " + item.name)
 
       item.children = await parseDoc(item.blob);
+      item.blob = "";
 
     } 
     item.children = await repeatParseDoc(item.children);
@@ -252,12 +253,12 @@ function parseForImports(str: string, arr: Array<string>): Dependencies[] {
         var patt6 = /\w+/gm;
         if (obj4) {
           var words = obj4[0].match(patt6);
-          if (words)
+          if (words) {
           result.push({
             name: words[3],
             default: true,
             type: "Class",
-          })
+          })}
         } 
 
       } else if (obj3) {
@@ -345,9 +346,9 @@ function parseForImports(str: string, arr: Array<string>): Dependencies[] {
   /* This function parses all components inside a render method, puts them in the correct hierarchy and returns them as a JSON file */
   function parseForComponents(stringToParse: string): Node[] {
     
-    var patt1 = /(<\w+[^>]*>|<[A-Z][A-Za-z]*[^(\/>)]*\/>|<\/\w+>)/gs // Any component
-    var patt2 = /<\w+[^\/>]*>/; //Opener of a wrapper
-    var patt3 = /<[A-Z][A-Za-z]*[^(\/>)]*\/>/; //Standalone component
+    var patt1 = /(<\w+[^(\/>)]*>|<[A-Z][A-Za-z]*[^\/]*\/>|<\/\w+>)/gs // Any component
+    var patt2 = /<\w+[^(\/>)]*>/; //Opener of a wrapper
+    var patt3 = /<[A-Z][A-Za-z]*[^\/]*\/>/; //Standalone component
     var patt4 = /<\/\w+>/; //Closer of a wrapper
     var JSONResult: Node[] = [];
     var id = 0;
