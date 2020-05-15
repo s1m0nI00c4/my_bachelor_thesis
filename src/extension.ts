@@ -13,7 +13,7 @@ export function activate(context: vscode.ExtensionContext) {
 
       vscode.workspace.findFiles("**/App.js", '**/node_modules/**', 10)
       .then(result1 => vscode.workspace.fs.readFile(result1[0]))
-      //.then(result2 => console.log(decoder.decode(result2)))
+      //.then(result1 => findEntryPoint())
       .then(result2 => parseDoc(decoder.decode(result2)))
       .then(result3 => repeatParseDoc(result3))
       .then(result4 => {console.log("RESULT"); console.log(result4)})
@@ -88,6 +88,23 @@ function getWebviewContent() {
         // Update the saved state
         vscode.setState({ count });
       }, 100);
+    </script>
+    <script src="../node_modules/viz.js/viz.js"></script>
+    <script src="../node_modules/viz.js/viz.js/full.render.js"></script>
+    <script>
+      var viz = new Viz();
+  
+      viz.renderSVGElement('digraph { a -> b }')
+      .then(function(element) {
+      document.body.appendChild(element);
+      })
+      .catch(error => {
+      // Create a new Viz instance (@see Caveats page for more info)
+      viz = new Viz();
+
+      // Possibly display the error
+      console.error(error);
+      });
     </script>
 </body>
 </html>`;

@@ -1,4 +1,4 @@
-import {processImports, processRoutes} from "./processor";
+import {processImports, processRoutes, processReturns} from "./processor";
 import * as Helper from "./helper";
 import * as vscode from 'vscode';
 import { TextDecoder } from 'util';
@@ -80,6 +80,26 @@ export async function parseDoc(str: string) {
       //console.log(allResources);
       result = allResources;
       }
+    } else {
+      var myComponents: Node[] = [];
+      myRender.forEach(item => {
+        if (item.content) {
+          myComponents = myComponents.concat(parseForComponents(item.content));
+        }
+      })
+        //console.log("My Components: ")
+        //console.log(myComponents);
+        var componentsToFollow: Node[] = followComponents(myComponents, processedImports);
+        //console.log("Components to follow:")
+        //console.log(componentsToFollow);
+        var withNavigation: Node[] = internalNavigation(componentsToFollow, myConsts);
+        var withNavigation2: Node[] = followComponents(withNavigation, processedImports);
+        //console.log("With Navigation 2: ")
+        //console.log(withNavigation2);
+        var allResources: Node[] = await ResourceFinder.findResources(withNavigation2);
+        //console.log("All Resources:");
+        //console.log(allResources);
+        result = allResources;
     }
 
     return result
@@ -313,27 +333,40 @@ function parseForImports(str: string, arr: Array<string>): Dependencies[] {
   /*This function parses a Javascript Class for its render() method*/
   
   function parseForRender(exports: Exports[]) {
-    var result: Exports[] = exports;
-    var regexC = new RegExp("render()[\\s\\S]*return[\\s\\S]*");
+    var result: Exports[] = [];
+    var regex1 = /render\(\)\s*\{[\s\S]*/g
     var pattExp = /return\s*\([\s\S]*/g
-    result.forEach(item => {
+    exports.forEach(item => {
       if (item.content) {
         if (item.type === "Class") {
-          var obj = item.content.match(regexC);
+          var obj = item.content.match(regex1);
           if (obj) {
             const newStringToParse = Helper.balancedParentheses(obj[0], "{");
-            var regex = new RegExp("return[\\s\\S]*")
             if (newStringToParse) {
-              var newObj = newStringToParse.match(regex);
-              if (newObj)
-                item.content = Helper.balancedParentheses(newObj[0], "(");
+              var listOfReturns = processReturns(newStringToParse);
+              //console.log(listOfReturns)
+              if (listOfReturns) {
+                listOfReturns.forEach(i => {
+                  result.push({
+                    name: item.name,
+                    type: item.type,
+                    default: item.default,
+                    content: i
+                  })
+                }) 
+              }
             }     
           }
         }
         else if (item.type === "Expression") {
           var obj = item.content.match(pattExp);
           if (obj) {
-            item.content = Helper.balancedParentheses(obj[0], "(");
+            result.push({
+              name: item.name,
+              type: item.type,
+              default: item.default,
+              content: Helper.balancedParentheses(obj[0], "(")
+            })
    
           }
 

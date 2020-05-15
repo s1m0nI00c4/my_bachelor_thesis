@@ -6,17 +6,17 @@ export async function findEntryPoint() {
     var defaultExpo = await entryPointExpo('**/App.js');
     if (defaultExpo) {
         result = defaultExpo;
-
     } else {
         
         var specificPath = await entryPointParser();
-        var specificExpo = await (entryPointGeneric(specificPath));
+        var specificExpo = await (entryPointExpoSpecific(specificPath));
         if (specificExpo) {
             result = specificExpo;
         } else {
-            result = await entryPointGeneric('**/index.js');
+            result = await entryPointExpo('**/index.js');
         }
     }
+    
     return result;
 }
 
@@ -30,11 +30,11 @@ async function entryPointExpo(app: string) :Promise<string> {
 
 }
 
-async function entryPointGeneric(app: string) :Promise<string> {
+async function entryPointExpoSpecific(app: string) :Promise<string> {
 
     var decoder = new TextDecoder('utf-8');
 
-    return vscode.workspace.findFiles(app, '**/node_modules/**', 10)
+    return vscode.workspace.findFiles(app, null, 10)
     .then(result1 => vscode.workspace.fs.readFile(result1[0]))
     .then(result2 => decoder.decode(result2))
 

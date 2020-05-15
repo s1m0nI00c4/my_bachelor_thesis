@@ -1,4 +1,6 @@
 import {Dependencies} from './parser';
+import * as Helper from "./helper";
+
 
 /* This function takes an array of imports and classifies them according to their name and properties, returning another array with these additional info*/
 export function processImports(arr: Dependencies[]): Dependencies[] {
@@ -83,4 +85,18 @@ export function processRoutes(routes: string, id: number) {
     })
   }
   return result;
+}
+
+export function processReturns(stringToParse: string): string[] {
+  var result: string[] = [];
+  var regex = /return\s*\([\s\S]*/g
+  var match = regex.exec(stringToParse);
+  if (match) {
+    var firstResult = Helper.balancedParentheses(match[0], "(")
+    result.push(firstResult);
+    var newStringToParse = stringToParse.slice(match.index+firstResult.length);
+    result = result.concat(processReturns(newStringToParse));
+  }
+
+  return result
 }
