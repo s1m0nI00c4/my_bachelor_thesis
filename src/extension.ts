@@ -28,7 +28,21 @@ export function activate(context: vscode.ExtensionContext) {
         }
       );
 
-      panel.webview.html = getWebviewContent();
+      const onDiskPath1 = vscode.Uri.file(
+        path.join(context.extensionPath, 'media', 'script.js')
+      );
+
+      const onDiskPath2 = vscode.Uri.file(
+        path.join(context.extensionPath, 'media', 'treeStyle.css')
+      );
+
+      // And get the special URI to use with the webview
+      const jsSrc = panel.webview.asWebviewUri(onDiskPath1);
+      const cssSrc = panel.webview.asWebviewUri(onDiskPath2);
+
+      const params = [jsSrc, cssSrc];
+
+      panel.webview.html = getWebviewContent(params);
 
       // Handle messages from the webview
       panel.webview.onDidReceiveMessage(
@@ -58,54 +72,32 @@ export function activate(context: vscode.ExtensionContext) {
       //
       // Make sure we hold on to the `webviewPanel` passed in here and
       // also restore any event listeners we need on it.
-      webviewPanel.webview.html = getWebviewContent();
+      
+      webviewPanel.webview.html = getWebviewContent([]);
     }
 }
 
-function getWebviewContent() {
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cat Coding</title>
-</head>
-<body>
-  <img src="https://media.giphy.com/media/JIX9t2j0ZTN9S/giphy.gif" width="300" />
-    <h1 id="lines-of-code-counter">0</h1>
-    <script>
-      const vscode = acquireVsCodeApi();
+function getWebviewContent(params: vscode.Uri[]) { 
 
-      const counter = document.getElementById('lines-of-code-counter');
-      
-      // Check if we have an old state to restore from
-      const previousState = vscode.getState();
-      let count = previousState ? previousState.count : 0;
-      counter.textContent = count;
-      
-      setInterval(() => {
-        counter.textContent = count++;
-        // Update the saved state
-        vscode.setState({ count });
-      }, 100);
-    </script>
-    <script src="../node_modules/viz.js/viz.js"></script>
-    <script src="../node_modules/viz.js/viz.js/full.render.js"></script>
-    <script>
-      var viz = new Viz();
-  
-      viz.renderSVGElement('digraph { a -> b }')
-      .then(function(element) {
-      document.body.appendChild(element);
-      })
-      .catch(error => {
-      // Create a new Viz instance (@see Caveats page for more info)
-      viz = new Viz();
+  return `
+  <!DOCTYPE html>
+  <html lang="en">
+    <head>
+      <meta charset="utf-8">
+      <title>Tree Example</title>
+      <link rel = "stylesheet" type = "text/css" href = "${params[1]}" />
+      <style>
+      </style>
 
-      // Possibly display the error
-      console.error(error);
-      });
-    </script>
-</body>
-</html>`;
+    </head>
+
+    <body>
+
+    <!-- load the d3.js library -->	
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.17/d3.min.js"></script>
+	
+    <script src="${params[0]}"></script>
+    </body>
+  </html>
+`;
 }
