@@ -1,4 +1,6 @@
-var treeData = [
+function myFunction(treeData) {
+  
+  /*var treeData = [
     {
       "name": "Top Level",
       "parent": "null",
@@ -23,13 +25,13 @@ var treeData = [
         }
       ]
     }
-  ];
+  ];*/
 
 
   // ************** Generate the tree diagram	 *****************
   var margin = {top: 20, right: 120, bottom: 20, left: 120},
-    width = 960 - margin.right - margin.left,
-    height = 500 - margin.top - margin.bottom;
+    width = 1960 - margin.right - margin.left,
+    height = 1500 - margin.top - margin.bottom;
     
   var i = 0,
     duration = 750,
@@ -53,16 +55,70 @@ var treeData = [
     
   update(root);
 
-  d3.select(self.frameElement).style("height", "500px");
+  d3.select(self.frameElement).style("height", "1500px");
 
   function update(source) {
 
     // Compute the new tree layout.
     var nodes = tree.nodes(root).reverse(),
       links = tree.links(nodes);
+    //nodes.forEach(function(d) {console.log(d.name + " --- " + d.id + " --- " + d.content + " " + d.x + " " + d.y)})
 
-    // Normalize for fixed-depth.
-    nodes.forEach(function(d) { d.y = d.depth * 180; });
+    /*var body = d3 .select("body")
+                  .selectAll("p")
+                  .data(nodes.reverse())
+                  .enter()
+                  .append("p")
+                  .text(function(d) {return d.name + " " + d.id + " " + d.content});*/
+    
+    var node = svg.selectAll(".node")
+                  .data(nodes.reverse())
+                  .enter()
+                  .append("g")
+                    .attr("class", "node")
+                    .attr("transform", function(d) {return "translate(" + d.x + "," + d.y + ")";})
+    node.append("circle")
+        .attr("r", 5)
+        .attr("fill", "steelblue");   
+    node.append("text")
+        .text(function(d) {return d.name})
+        .attr("class", "nodeName");
+    /*node.append("text")
+        .text(function(d) {return "<br>" + d.content})
+        .attr("class", "nodeContent");*/
+
+    var diagonal = d3.svg.diagonal();
+
+    links.forEach(function(d) { console.log("source " + d.source.x + " " + d.source.y + " target " + d.target.x + " " + d.target.y)})
+
+    svg.selectAll(".link")
+          .data(links)
+          .enter()
+          .append("path")
+          .attr("class", "link")
+          .attr("fill", "none")
+          .attr("stroke", "steelblue")
+          .attr("d", diagonal);
+
+    //The data for our line
+  var lineData = [ { "x": 1,   "y": 5},  { "x": 20,  "y": 20},
+                  { "x": 40,  "y": 10}, { "x": 60,  "y": 40},
+                  { "x": 80,  "y": 5},  { "x": 100, "y": 60}];
+ 
+ //This is the accessor function we talked about above
+ var lineFunction = d3.svg.line()
+                          .x(function(d) { return d.x; })
+                          .y(function(d) { return d.y; })
+                         .interpolate("linear");
+
+//The line SVG Path we draw
+var lineGraph = svgContainer.append("path")
+                            .attr("d", lineFunction(lineData))
+                            .attr("stroke", "blue")
+                            .attr("stroke-width", 2)
+                            .attr("fill", "none");
+    /*// Normalize for fixed-depth.
+    nodes.forEach(function(d) { d.y = d.depth * 18; });
 
     // Update the nodes…
     var node = svg.selectAll("g.node")
@@ -151,5 +207,7 @@ var treeData = [
     d.children = d._children;
     d._children = null;
     }
-    update(d);
+    update(d);*/
   }
+
+}

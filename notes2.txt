@@ -1,0 +1,35 @@
+d3.json("vscode-resource://file///c%3A/Users/Simonluca/vscode-extension-samples/webview-sample/media/users.json", function(error, data) {
+    if (error) {
+        return console.warn(error);
+    }
+    
+    var svg = d3.select("body")
+    .append("svg")
+    .attr("width", width)
+    .attr("height", height);
+
+    for (var i = 0; i < data.length; i++) {
+
+        var g = svg.append("g")
+               .attr("transform", function(d, i) {
+                        return "translate(0,0)";
+               });
+
+        var ellipse = g.append("ellipse")
+            .attr("cx", 250)
+            .attr("cy", (i+1)*50)
+            .attr("rx", 150)
+            .attr("ry", (i+1)*50)
+            .attr("fill", "green")
+            .append("text");
+            
+        g.append("text")
+            .attr("x", 150)
+            .attr("y", 50)
+            .attr("stroke", "#fff")
+            .text("This is an ellipse!");
+    }
+    
+});
+
+<p>${jsonUri}</p>

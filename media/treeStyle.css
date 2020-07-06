@@ -6,8 +6,20 @@
 
   .node text { font: 16px sans-serif; stroke: white; }
 
+  .nodeName {
+    font: 12px sans-serif;
+    fill: white;
+    text-transform: uppercase;
+  }
+
+  .nodeContent {
+    margin-top: 10px;
+    font: 10px sans-serif;
+    fill: white;
+  }
+
   .link {
     fill: none;
-    stroke: #ccc;
+    stroke: white;
     stroke-width: 2px;
   }

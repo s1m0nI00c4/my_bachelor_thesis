@@ -4,6 +4,8 @@ import { TextDecoder } from 'util';
 import { stringify } from 'querystring';
 import {parseDoc, repeatParseDoc} from './parser';
 import {findEntryPoint} from './entrypointfinder';
+import {Node} from './parser';
+
 
 export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
@@ -11,12 +13,15 @@ export function activate(context: vscode.ExtensionContext) {
 
       var decoder = new TextDecoder('utf-8');
 
-      vscode.workspace.findFiles("**/App.js", '**/node_modules/**', 10)
+      var myResult = vscode.workspace.findFiles("**/App.js", '**/node_modules/**', 10)
       .then(result1 => vscode.workspace.fs.readFile(result1[0]))
       //.then(result1 => findEntryPoint())
       .then(result2 => parseDoc(decoder.decode(result2)))
       .then(result3 => repeatParseDoc(result3))
-      .then(result4 => {console.log("RESULT"); console.log(result4)})
+      .then(result4 => {return JSON.stringify(result4)})
+
+      //console.log(await ((await myResult).charAt(0)));
+      //console.log(JSON.parse(await myResult));
 
 
       const panel = vscode.window.createWebviewPanel(
@@ -36,26 +41,18 @@ export function activate(context: vscode.ExtensionContext) {
         path.join(context.extensionPath, 'media', 'treeStyle.css')
       );
 
+      const onDiskPath3 = vscode.Uri.file(
+        path.join(context.extensionPath, 'media', 'data.json')
+      );
+
       // And get the special URI to use with the webview
       const jsSrc = panel.webview.asWebviewUri(onDiskPath1);
       const cssSrc = panel.webview.asWebviewUri(onDiskPath2);
+      const jsonSrc = panel.webview.asWebviewUri(onDiskPath3);
 
-      const params = [jsSrc, cssSrc];
+      const params = [jsSrc, cssSrc, jsonSrc];
 
-      panel.webview.html = getWebviewContent(params);
-
-      // Handle messages from the webview
-      panel.webview.onDidReceiveMessage(
-        message => {
-          switch (message.command) {
-            case 'alert':
-              vscode.window.showErrorMessage(message.text);
-              return;
-          }
-        },
-        undefined,
-        context.subscriptions
-      );
+      panel.webview.html = getWebviewContent(params, await myResult);
     })
   );
 
@@ -73,11 +70,13 @@ export function activate(context: vscode.ExtensionContext) {
       // Make sure we hold on to the `webviewPanel` passed in here and
       // also restore any event listeners we need on it.
       
-      webviewPanel.webview.html = getWebviewContent([]);
+      webviewPanel.webview.html = getWebviewContent([], "");
     }
 }
 
-function getWebviewContent(params: vscode.Uri[]) { 
+function getWebviewContent(params: vscode.Uri[], content: string) { 
+
+  //console.log(JSON.parse(content));
 
   return `
   <!DOCTYPE html>
@@ -86,17 +85,18 @@ function getWebviewContent(params: vscode.Uri[]) {
       <meta charset="utf-8">
       <title>Tree Example</title>
       <link rel = "stylesheet" type = "text/css" href = "${params[1]}" />
-      <style>
-      </style>
-
     </head>
 
     <body>
-
-    <!-- load the d3.js library -->	
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.17/d3.min.js"></script>
-	
-    <script src="${params[0]}"></script>
+      <script src="http://d3js.org/d3.v3.min.js"></script>
+      <script src="${params[0]}"></script>
+      <script>
+        /*var request = new XMLHttpRequest();
+        request.open("GET", "${params[2]}", false);
+        request.send(null)
+        var my_JSON_object = JSON.parse(request.responseText);*/
+        myFunction(${content});
+      </script>
     </body>
   </html>
 `;
