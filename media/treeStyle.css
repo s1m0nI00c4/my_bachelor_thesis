@@ -1,10 +1,4 @@
-.node circle {
-    fill: #fff;
-    stroke: steelblue;
-    stroke-width: 3px;
-  }
-
-  .node text { font: 16px sans-serif; stroke: white; }
+  .node text { font: 12px sans-serif; stroke: white; }
 
   .nodeName {
     font: 12px sans-serif;
@@ -16,10 +10,4 @@
     margin-top: 10px;
     font: 10px sans-serif;
     fill: white;
-  }
-
-  .link {
-    fill: none;
-    stroke: white;
-    stroke-width: 2px;
   }
