@@ -1,31 +1,27 @@
 function myFunction(treeData) {
   
-  /*var treeData = [
+  var legenda = [
     {
-      "name": "Top Level",
-      "parent": "null",
-      "children": [
-        {
-          "name": "Level 2: A",
-          "parent": "Top Level",
-          "children": [
-            {
-              "name": "Son of A",
-              "parent": "Level 2: A"
-            },
-            {
-              "name": "Daughter of A",
-              "parent": "Level 2: A"
-            }
-          ]
-        },
-        {
-          "name": "Level 2: B",
-          "parent": "Top Level"
-        }
-      ]
+      "name": "State Management",
+      "color": "red",
+      "position": 1,
+    },
+    {
+      "name": "Navigation",
+      "color": "yellow",
+      "position": 2,
+    },
+    {
+      "name": "React Native",
+      "color": "green",
+      "position": 3,
+    },
+    {
+      "name": "Other components",
+      "color": "black",
+      "position": 4,
     }
-  ];*/
+  ];
 
 
   // ************** Generate the tree diagram	 *****************
@@ -98,9 +94,44 @@ function myFunction(treeData) {
     update(d);
   }
 
+  function defineColor(d) {
+    result = "";
+    if (d._children) {
+      if (d.origin === "unstated") {
+        result = "red";
+      } else if (d.origin === "react-native") {
+        result = "green";
+      } else if (d.origin === "react-navigation" || d.type === "Navigational") {
+        result = "yellow";
+      }
+
+    } else {
+      result = "white";
+    }
+    return result;
+  }
+
   function update(source) {
 
     svg.selectAll("*").remove();
+
+    var legend = svg.selectAll(".legenda")
+          .data(legenda)
+          .enter()
+          .append("g")
+            .attr("class", "legenda")
+            .attr("transform", function(d) {return "translate(" + 10 + "," + d.position*40 + ")"});
+       
+    legend.append("circle")
+             .attr("r", 10)
+             .attr("fill", function(d) {return d.color}) 
+             .attr("stroke", "white")
+             .attr("stroke-width", "1px");
+       
+    legend.append("text")
+             .text(function(d) {return d.name})
+             .attr("class", "nodeName")
+             .attr("transform", function(d) {return "translate(" + 15 + "," + 4 + ")";});
 
     // Compute the new tree layout.
     var nodes = tree.nodes(root).reverse()
@@ -115,7 +146,7 @@ function myFunction(treeData) {
                     .attr("transform", function(d) {return "translate(" + d.x + "," + d.y + ")";})
     node.append("circle")
         .attr("r", 10)
-        .attr("fill", function(d) {return d._children ? "steelblue" : "white";}) 
+        .attr("fill", defineColor) 
         .attr("stroke", "white")
         .attr("stroke-width", "1px")
         .on("click", click)
@@ -147,6 +178,25 @@ function myFunction(treeData) {
           .attr("fill", "none")
           .attr("stroke", "white")
           .attr("d", diagonal);
+
+    /*var legend = svg.selectAll(".legenda")
+          .data(legenda)
+          .enter()
+          .append(text)
+            .text(function(d) {return d.name})
+            .attr("class", "legenda")
+            .attr("transform", "translate(" + 10 + "," + d.position*20 + ")");
+       
+    legend.append("circle")
+             .attr("r", 10)
+             .attr("fill", d.color) 
+             .attr("stroke", "white")
+             .attr("stroke-width", "1px");
+       
+    legend.append("text")
+             .text(function(d) {return d.name})
+             .attr("class", "nodeName")
+             .attr("transform", function(d) {return "translate(" + 15 + "," + 4 + ")";});*/
 
     /*// Normalize for fixed-depth.
     nodes.forEach(function(d) { d.y = d.depth * 18; });

@@ -1,6 +1,6 @@
 {
-	"name": "cat-coding",
-	"displayName": "Cat Coding",
+	"name": "react-native-visualizer",
+	"displayName": "React Native Visualizer",
 	"description": "LEAVE BLANK",
 	"version": "0.0.1",
 	"engines": {
@@ -10,16 +10,16 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onCommand:catCoding.start",
+		"onCommand:RNVisualizer.start",
 		"onCommand:catCoding.doRefactor",
-		"onWebviewPanel:catCoding"
+		"onWebviewPanel:RNVisualizer"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
 		"commands": [
 			{
-				"command": "catCoding.start",
-				"title": "Start new Cat Coding session"
+				"command": "RNVisualizer.start",
+				"title": "Start new RN Visualizer session"
 			},
 			{
 				"command": "catCoding.doRefactor",

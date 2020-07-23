@@ -11,3 +11,7 @@
     font: 10px sans-serif;
     fill: white;
   }
+
+  .legenda {
+    font: 12px sans-serif; stroke: white;
+  }

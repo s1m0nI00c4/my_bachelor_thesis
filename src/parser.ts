@@ -383,43 +383,48 @@ function parseForImports(str: string, arr: Array<string>): Dependencies[] {
     var patt2 = /<\w+[^\/>]*>/; //Opener of a wrapper
     var patt3 = /<[A-Z][A-Za-z]*[^(\/>)]*\/>/; //Standalone component
     var patt4 = /<\/\w+>/; //Closer of a wrapper
+    var patt5 = /<Text[^>]*>[^<]*/; //Text tag
     var JSONResult: Node[] = [];
     var id = 0;
-    var result = stringToParse.match(patt1);
-    result?.forEach((item) => {
-        var test1 = item.match(patt2);
-        var name = item.match(/\w+/);
+    var item = null;
+    while ((item = patt1.exec(stringToParse)) != null ) {
+      var test1 = item[0].match(patt2);
+        var name = item[0].match(/\w+/);
         
         if (test1 && name) {
+          var ifText = stringToParse.slice(item.index).match(patt5);
+          if (ifText) {
+            item[0] = ifText[0];
+          }
           JSONResult.push(
             {
               id: id++,
               name: name[0],
-              content: item,
+              content: item[0],
               type: "Opener",
               children: [],
             }
           );
         } else {
-          var test2 = item.match(patt3);
+          var test2 = item[0].match(patt3);
           if (test2 && name) {
             JSONResult.push(
               { 
                 id: id++,
                 name: name[0],
-                content: item,
+                content: item[0],
                 type: "Standalone",
                 children: [],
               }
             );
           } else {
-            var test3 = item.match(patt4);
+            var test3 = item[0].match(patt4);
             if (name && test3) {
               JSONResult.push(
                 {
                   id: id++,
                   name: name[0],
-                  content: item,
+                  content: item[0],
                   type: "Closer",
                   children: [],
                 }
@@ -427,7 +432,7 @@ function parseForImports(str: string, arr: Array<string>): Dependencies[] {
             }
           }
         }
-    });
+    }
 
    return hierarchify(JSONResult);
    //return JSONResult;
@@ -454,6 +459,9 @@ function parseForImports(str: string, arr: Array<string>): Dependencies[] {
               //console.log("Values are = openers: " + openers + "; closers: " + closers + "; cc: " + cc + ". Current cc: " + newArray[cc].name + " - " + newArray[cc].type)
               cc = cc +1;
             }
+            
+            
+            newArray[i].content += newArray[cc-1].content;
             newArray[i].children = hierarchify(newArray.slice(i+1, cc-1));
             result.push(newArray[i]);
             i = cc;
