@@ -13,6 +13,7 @@ export interface Node {
   origin?: string;
   follow?: boolean;
   blob?: string;
+  myUri?: vscode.Uri;
 }
 
 export interface Dependencies {
@@ -36,7 +37,7 @@ interface Exports {
   content?: string;
 }
 
-export async function parseDoc(str: string) {
+export async function parseDoc(str: string, myURI: vscode.Uri) {
 
     var result: Node[] = [];
 
@@ -65,7 +66,7 @@ export async function parseDoc(str: string) {
     //console.log(myRender);
     if (myRender.length === 1) {
       if (myRender[0].content) {
-      var myComponents: Node[] = parseForComponents(myRender[0].content);
+      var myComponents: Node[] = parseForComponents(myRender[0].content, myURI);
       //console.log("My Components: ")
       //console.log(myComponents);
       var componentsToFollow: Node[] = followComponents(myComponents, processedImports);
@@ -84,7 +85,7 @@ export async function parseDoc(str: string) {
       var myComponents: Node[] = [];
       myRender.forEach(item => {
         if (item.content) {
-          myComponents = myComponents.concat(parseForComponents(item.content));
+          myComponents = myComponents.concat(parseForComponents(item.content, myURI));
         }
       })
         //console.log("My Components: ")
@@ -106,17 +107,17 @@ export async function parseDoc(str: string) {
   
 }
 
-export async function repeatParseDoc(initial: Node[]): Promise<Node[]> {
+export async function repeatParseDoc(initial: Node[], myURIArray: vscode.Uri): Promise<Node[]> {
   var result: Node[] = initial;
    for (var item of result) {
     if (item.blob && (!item.children || item.children.length === 0)) {
       //console.log("LEAF: " + item.name)
 
-      item.children = await parseDoc(item.blob);
+      item.children = await parseDoc(item.blob, myURIArray);
       item.blob = "";
 
     } 
-    item.children = await repeatParseDoc(item.children);
+    item.children = await repeatParseDoc(item.children, myURIArray);
   }
   return result;
 
@@ -377,7 +378,7 @@ function parseForImports(str: string, arr: Array<string>): Dependencies[] {
     return result;
   }
   /* This function parses all components inside a render method, puts them in the correct hierarchy and returns them as a JSON file */
-  function parseForComponents(stringToParse: string): Node[] {
+  function parseForComponents(stringToParse: string, myUri: vscode.Uri): Node[] {
     
     var patt1 = /(<\w+[^>]*>|<[A-Z][A-Za-z]*[^(\/>)]*\/>|<\/\w+>)/gs // Any component 
     var patt2 = /<\w+[^\/>]*>/; //Opener of a wrapper
@@ -403,6 +404,7 @@ function parseForImports(str: string, arr: Array<string>): Dependencies[] {
               content: item[0],
               type: "Opener",
               children: [],
+              myUri: myUri,
             }
           );
         } else {
@@ -415,6 +417,7 @@ function parseForImports(str: string, arr: Array<string>): Dependencies[] {
                 content: item[0],
                 type: "Standalone",
                 children: [],
+                myUri: myUri,
               }
             );
           } else {
@@ -427,6 +430,7 @@ function parseForImports(str: string, arr: Array<string>): Dependencies[] {
                   content: item[0],
                   type: "Closer",
                   children: [],
+                  myUri: myUri,
                 }
               );
             }

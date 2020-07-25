@@ -11,11 +11,15 @@ export function activate(context: vscode.ExtensionContext) {
 
       var decoder = new TextDecoder('utf-8');
 
-      var myResult = vscode.workspace.findFiles("**/MissionRestaurant.js", '**/node_modules/**', 10)
-      .then(result1 => vscode.workspace.fs.readFile(result1[0]))
+      var myURIArray = await vscode.workspace.findFiles("**/App.js", '**/node_modules/**', 10);
+
+      //vscode.workspace.openTextDocument(myURIArray[0])
+      //.then(resultA => vscode.window.showTextDocument(resultA,1,false));
+
+      var myResult = vscode.workspace.fs.readFile(myURIArray[0])
       //.then(result1 => findEntryPoint())
-      .then(result2 => parseDoc(decoder.decode(result2)))
-      .then(result3 => repeatParseDoc(result3))
+      .then(result2 => parseDoc(decoder.decode(result2), myURIArray[0]))
+      .then(result3 => repeatParseDoc(result3, myURIArray[0]))
       .then(result4 => {return JSON.stringify(result4)})
 
       console.log(JSON.parse(await myResult));
@@ -44,6 +48,22 @@ export function activate(context: vscode.ExtensionContext) {
       const params = [jsSrc, cssSrc];
 
       panel.webview.html = getWebviewContent(params, await myResult);
+
+      // Handle messages from the webview
+      panel.webview.onDidReceiveMessage(
+        message => {
+          switch (message.command) {
+            case 'alert':
+              vscode.workspace.openTextDocument(message.text)
+              .then(resultA => vscode.window.showTextDocument(resultA,1,false));
+              return;
+          }
+        },
+        undefined,
+        context.subscriptions
+      );
+
+
     })
   );
 

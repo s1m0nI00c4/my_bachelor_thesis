@@ -1,5 +1,3 @@
-  .node text { font: 12px sans-serif; stroke: white; }
-
   .nodeName {
     font: 12px sans-serif;
     fill: white;
@@ -12,6 +10,15 @@
     fill: white;
   }
 
-  .legenda {
-    font: 12px sans-serif; stroke: white;
+  .legenda, .plus {
+    font: 12px sans-serif; 
+    stroke: white;
+  }
+
+  .button {
+    background-color: white;
+    padding: 2px;
+    font: 12px sans-serif;
+    stroke:steelblue;
+    cursor: pointer;
   }

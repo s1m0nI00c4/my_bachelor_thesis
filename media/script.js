@@ -1,4 +1,12 @@
 function myFunction(treeData) {
+
+  const vscode = acquireVsCodeApi();
+  /*setInterval(() => {
+              vscode.postMessage({
+                  command: 'alert',
+                  text: '🐛  on line '
+              });
+  }, 1000);*/
   
   var legenda = [
     {
@@ -73,10 +81,9 @@ function myFunction(treeData) {
       d.children = d._children;
       d._children = null;
       height = height + 180;
-      console.log(d.children.length);
       width = width + (d.children.length-1)*180;
     }
-
+    console.log(d.myUri);
     d3.select("svg").attr("width", width)
        .attr("height", height);
     update(d);
@@ -91,6 +98,8 @@ function myFunction(treeData) {
       d.on = true;
       console.log(d.on);
     }
+    console.log(d.myUri.path);
+    console.log(d.myUri.scheme);
     update(d);
   }
 
@@ -111,10 +120,20 @@ function myFunction(treeData) {
     return result;
   }
 
+  function openDoc(d) {
+    console.log(vscode);
+    vscode.postMessage({
+      command: 'alert',
+      text: d.myUri.path,
+    });
+  }
+
   function update(source) {
 
+    //remove everything there was before
     svg.selectAll("*").remove();
 
+    // Enter and style the color legend of the scheme
     var legend = svg.selectAll(".legenda")
           .data(legenda)
           .enter()
@@ -138,6 +157,7 @@ function myFunction(treeData) {
     nodes.forEach(function(d){ d.y = d.depth * 180});
     var links = tree.links(nodes);
  
+    //Enter the node data and transform their positions
     var node = svg.selectAll(".node")
                   .data(nodes.reverse())
                   .enter()
@@ -160,11 +180,16 @@ function myFunction(treeData) {
         .attr("class", "plus")
         .attr("transform", function(d) {return "translate(" + 15 + "," + 20 + ")";})
         .on("click", toggle)
-        .style("cursor", "pointer")
+        .style("cursor", "pointer");
     node.append("text")
         .text(function(d) {return d.on ? d.content : ""})
         .attr("class", "nodeContent")
         .attr("transform", function(d) {return "translate(" + 15 + "," + 36 + ")";});
+    node.append("text")
+        .text(function(d) {return d.on ? "OPEN" : ""})
+        .attr("transform", function(d) {return "translate(" + 15 + "," + 52 + ")";})
+        .attr("class", "button")
+        .on("click", openDoc)
 
     var diagonal = d3.svg.diagonal();
 
