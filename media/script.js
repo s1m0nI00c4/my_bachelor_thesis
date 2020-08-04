@@ -180,9 +180,47 @@ function addNode(d) {
   }
   var y = document.getElementById("editButton");
   y.style.display = "block";
-  update(root);             // We update the view
-  
+  update(root);             // We update the view 
 }
+
+function removeNode(d) {
+  if (d.id === root.id) {
+    svg.selectAll(".node").remove();
+    svg.selectAll(".link").remove();
+  } else {
+    root.children.forEach(function(child){
+      traverseToRemove(root, child, d);
+    })
+  }
+}
+
+function traverseToRemove(parent, current, target) {
+  if (current.id === target.id) {
+    var newChildren = [];
+    if (parent.children) {
+      parent.children.forEach(function(child) {
+        if (child.id != target.id) {
+          newChildren.push(child);
+        }
+      })
+      parent.children = newChildren;
+    } else {
+      parent._children.forEach(function(child) {
+        if (child.id != target.id) {
+          newChildren.push(child);
+        }
+      })
+      parent._children = newChildren;
+    }
+  } else {
+    current.children.forEach(function(c){
+      traverseToRemove(current, c, target)
+    })
+  }
+  update(root);
+}
+
+
 //This method recursively traverses the tree, stops if it finds the parent and pushes a child to it, otherwise travels up to the (shown) leaves.
 //If the parent node is closed, the child is added nontheless, but it's hidden (the parent needs to be opened for the child to show up).
 function traverseToAdd (current, target, newNode) {
@@ -252,6 +290,12 @@ function traverseToAdd (current, target, newNode) {
         .on("click", addNode)
         .attr("transform", function(d) {return "translate(" + -30 + "," + 8 + ")";})
         .style("display", function() {return displayMod ? "block" : "none"});
+    node.append("text")
+        .text("x")
+        .attr("class", "xButton")
+        .on("click", removeNode)
+        .attr("transform", function(d) {return "translate(" + -30 + "," + 6 + ")";})
+        .style("display", function() {return removeMod ? "none" : "block"});
     // Node name
     node.append("text")
         .text(function(d) {return d.name})
@@ -413,10 +457,17 @@ function traverseToAdd (current, target, newNode) {
     update(d);*/
   }
 
+  function toggleRemoveMode() {
+    removeMod = !removeMod;
+    update(root);
+    
+  }
+
 }
 
 var newChild = [];
 var displayMod = false;
+var removeMod = false;
 
 function handleClick(treeData) {
   newChild = [];

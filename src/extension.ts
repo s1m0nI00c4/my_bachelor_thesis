@@ -94,7 +94,8 @@ function getWebviewContent(params: vscode.Uri[], content: string) {
           handleClick(${content});
         }
       </script>
-      <button type="button" id="editButton" onclick="toggleEditMode()">Click Me!</button>
+      <button type="button" id="editButton" onclick="toggleEditMode()">Add node!</button>
+      <button type="button" id="editButton" onclick="toggleRemoveMode()">Remove node!</button>
       <p class="alert">Click on the blue plus to add your new node to the desired parent</p>
       <form name="myform" onSubmit="return handleMe()">
             <input type="text" id="name" placeholder="Node name">
