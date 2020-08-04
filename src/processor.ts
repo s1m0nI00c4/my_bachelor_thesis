@@ -1,5 +1,7 @@
-import {Dependencies} from './parser';
+import {Node, Dependencies} from './parser';
+import * as Parser from './parser';
 import * as Helper from "./helper";
+import * as vscode from 'vscode';
 
 
 /* This function takes an array of imports and classifies them according to their name and properties, returning another array with these additional info*/
@@ -62,25 +64,28 @@ export function processImports(arr: Dependencies[]): Dependencies[] {
     return result;
   }
 
-export function processRoutes(routes: string, id: number) {
+export function processRoutes(routes: string, id: number, myUri: vscode.Uri) {
   var patt1 = /\w+:\s*\w+/g
   var patt2 = /\w+/g
-  var result: {id: number, name: string, content: string, type: string, children?: any[], origin?: string, follow?: boolean}[] = [];
+  var result: Node[] = [];
   var obj1 = routes.match(patt1);
   if(obj1) {
-    obj1.forEach(item => {
+    var len = obj1.length;
+    obj1.forEach((item) => {
       var obj2 = item.match(patt2);
       if (obj2) {
+        Parser.setGID();
         result.push({
-          id: id++,
+          id: Parser.getGID(),
           name: obj2[0],
           content: obj2[0],
-          children: [{id: id++, name: obj2[1], content: obj2[1], type: "Navigational", children: [], origin: undefined, follow: true }],
+          children: [{id: Parser.getGID()+1, name: obj2[1], content: obj2[1], type: "Navigational", children: [], origin: undefined, follow: true, myUri:myUri }],
           type: "Navigational",
           origin: "react-navigation",
+          myUri: myUri,
           follow: true
         })
-
+        Parser.setGID();
       }
     })
   }

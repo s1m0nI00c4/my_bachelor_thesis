@@ -18,8 +18,8 @@ export function activate(context: vscode.ExtensionContext) {
 
       var myResult = vscode.workspace.fs.readFile(myURIArray[0])
       //.then(result1 => findEntryPoint())
-      .then(result2 => parseDoc(decoder.decode(result2), myURIArray[0]))
-      .then(result3 => repeatParseDoc(result3, myURIArray[0]))
+      .then(result2 => parseDoc(decoder.decode(result2), myURIArray[0], 0))
+      .then(result3 => repeatParseDoc(result3))
       .then(result4 => {return JSON.stringify(result4)})
 
       console.log(JSON.parse(await myResult));
@@ -89,6 +89,19 @@ function getWebviewContent(params: vscode.Uri[], content: string) {
     <body>
       <script src="http://d3js.org/d3.v3.min.js"></script>
       <script src="${params[0]}"></script>
+      <script>
+        function handleMe() {
+          handleClick(${content});
+        }
+      </script>
+      <button type="button" id="editButton" onclick="toggleEditMode()">Click Me!</button>
+      <p class="alert">Click on the blue plus to add your new node to the desired parent</p>
+      <form name="myform" onSubmit="return handleMe()">
+            <input type="text" id="name" placeholder="Node name">
+            <input type="text" id="content" placeholder="Node content">
+            <input type="number" id="id" min="0" placeholder="Node id">
+            <input name="Submit"  type="submit" value="Add to graph" >
+      </form>
       <script>
         myFunction(${content});
       </script>

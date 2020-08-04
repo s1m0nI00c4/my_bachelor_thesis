@@ -3,6 +3,7 @@ import * as Helper from "./helper";
 import * as vscode from 'vscode';
 import { TextDecoder } from 'util';
 import * as ResourceFinder from './resourcefinder';
+var G_ID = 0;
 
 export interface Node {
   id: number;
@@ -13,7 +14,7 @@ export interface Node {
   origin?: string;
   follow?: boolean;
   blob?: string;
-  myUri?: vscode.Uri;
+  myUri: vscode.Uri;
 }
 
 export interface Dependencies {
@@ -28,6 +29,7 @@ interface Consts {
   name: string;
   content: string;
   type: string;
+  myUri: vscode.Uri;
 }
 
 interface Exports {
@@ -37,7 +39,7 @@ interface Exports {
   content?: string;
 }
 
-export async function parseDoc(str: string, myURI: vscode.Uri) {
+export async function parseDoc(str: string, myURI: vscode.Uri, id: number) {
 
     var result: Node[] = [];
 
@@ -48,7 +50,7 @@ export async function parseDoc(str: string, myURI: vscode.Uri) {
     //console.log("My processed imports");
     //console.log(processedImports);
 
-    var myConsts: Consts[] = parseForConst(str);
+    var myConsts: Consts[] = parseForConst(str, myURI);
     //console.log("My consts")
     //console.log(myConsts);
   
@@ -66,7 +68,7 @@ export async function parseDoc(str: string, myURI: vscode.Uri) {
     //console.log(myRender);
     if (myRender.length === 1) {
       if (myRender[0].content) {
-      var myComponents: Node[] = parseForComponents(myRender[0].content, myURI);
+      var myComponents: Node[] = parseForComponents(myRender[0].content, myURI, id);
       //console.log("My Components: ")
       //console.log(myComponents);
       var componentsToFollow: Node[] = followComponents(myComponents, processedImports);
@@ -76,7 +78,7 @@ export async function parseDoc(str: string, myURI: vscode.Uri) {
       var withNavigation2: Node[] = followComponents(withNavigation, processedImports);
       //console.log("With Navigation 2: ")
       //console.log(withNavigation2);
-      var allResources: Node[] = await ResourceFinder.findResources(withNavigation2);
+      var allResources: Node[] = await ResourceFinder.findResources(withNavigation2, myURI);
       //console.log("All Resources:");
       //console.log(allResources);
       result = allResources;
@@ -85,7 +87,7 @@ export async function parseDoc(str: string, myURI: vscode.Uri) {
       var myComponents: Node[] = [];
       myRender.forEach(item => {
         if (item.content) {
-          myComponents = myComponents.concat(parseForComponents(item.content, myURI));
+          myComponents = myComponents.concat(parseForComponents(item.content, myURI, id));
         }
       })
         //console.log("My Components: ")
@@ -97,7 +99,7 @@ export async function parseDoc(str: string, myURI: vscode.Uri) {
         var withNavigation2: Node[] = followComponents(withNavigation, processedImports);
         //console.log("With Navigation 2: ")
         //console.log(withNavigation2);
-        var allResources: Node[] = await ResourceFinder.findResources(withNavigation2);
+        var allResources: Node[] = await ResourceFinder.findResources(withNavigation2, myURI);
         //console.log("All Resources:");
         //console.log(allResources);
         result = allResources;
@@ -107,17 +109,17 @@ export async function parseDoc(str: string, myURI: vscode.Uri) {
   
 }
 
-export async function repeatParseDoc(initial: Node[], myURIArray: vscode.Uri): Promise<Node[]> {
+export async function repeatParseDoc(initial: Node[]): Promise<Node[]> {
   var result: Node[] = initial;
    for (var item of result) {
     if (item.blob && (!item.children || item.children.length === 0)) {
       //console.log("LEAF: " + item.name)
 
-      item.children = await parseDoc(item.blob, myURIArray);
+      item.children = await parseDoc(item.blob, item.myUri, item.id);
       item.blob = "";
 
     } 
-    item.children = await repeatParseDoc(item.children, myURIArray);
+    item.children = await repeatParseDoc(item.children);
   }
   return result;
 
@@ -378,7 +380,7 @@ function parseForImports(str: string, arr: Array<string>): Dependencies[] {
     return result;
   }
   /* This function parses all components inside a render method, puts them in the correct hierarchy and returns them as a JSON file */
-  function parseForComponents(stringToParse: string, myUri: vscode.Uri): Node[] {
+  function parseForComponents(stringToParse: string, myUri: vscode.Uri, id: number): Node[] {
     
     var patt1 = /(<\w+[^>]*>|<[A-Z][A-Za-z]*[^(\/>)]*\/>|<\/\w+>)/gs // Any component 
     var patt2 = /<\w+[^\/>]*>/; //Opener of a wrapper
@@ -386,7 +388,7 @@ function parseForImports(str: string, arr: Array<string>): Dependencies[] {
     var patt4 = /<\/\w+>/; //Closer of a wrapper
     var patt5 = /<Text[^>]*>[^<]*/; //Text tag
     var JSONResult: Node[] = [];
-    var id = 0;
+    var newId = id+1;
     var item = null;
     while ((item = patt1.exec(stringToParse)) != null ) {
       var test1 = item[0].match(patt2);
@@ -399,7 +401,7 @@ function parseForImports(str: string, arr: Array<string>): Dependencies[] {
           }
           JSONResult.push(
             {
-              id: id++,
+              id: G_ID++,
               name: name[0],
               content: item[0],
               type: "Opener",
@@ -412,7 +414,7 @@ function parseForImports(str: string, arr: Array<string>): Dependencies[] {
           if (test2 && name) {
             JSONResult.push(
               { 
-                id: id++,
+                id: G_ID++,
                 name: name[0],
                 content: item[0],
                 type: "Standalone",
@@ -425,7 +427,7 @@ function parseForImports(str: string, arr: Array<string>): Dependencies[] {
             if (name && test3) {
               JSONResult.push(
                 {
-                  id: id++,
+                  id: G_ID++,
                   name: name[0],
                   content: item[0],
                   type: "Closer",
@@ -484,7 +486,7 @@ function parseForImports(str: string, arr: Array<string>): Dependencies[] {
       
       return result;
   }
-function parseForConst(str: string): Consts[] {
+function parseForConst(str: string, myUri: vscode.Uri): Consts[] {
 
   var patt1 = /const\s*\w+\s*=\s*(createAppContainer|createSwitchNavigator|createBottomTabNavigator|createStackNavigator)\s*\([^\)]*\)/g //Catches a navigation component
   var patt2 = /const\s*\w+\s*=\s*{[^}]*}/g //Catches an object, usually a route
@@ -497,12 +499,15 @@ function parseForConst(str: string): Consts[] {
       var name = patt4.exec(item.slice(5));
       var content = patt4.exec(Helper.balancedParentheses(item, "("));
       var type = "Navigation component"
-      if (name && content)
+      if (name && content) {
       result.push({
         name: name[0],
         content: content[0],
-        type: type
+        type: type,
+        myUri: myUri
       })
+      }
+      
     })
   }
   var obj2 = str.match(patt2);
@@ -515,7 +520,8 @@ function parseForConst(str: string): Consts[] {
       result.push({
         name: name[0],
         content: content,
-        type: type
+        type: type,
+        myUri: myUri
       })
     })
   }
@@ -529,7 +535,8 @@ function parseForConst(str: string): Consts[] {
       result.push({
         name: name[0],
         content: content,
-        type: type
+        type: type,
+        myUri: myUri
       })
     }
   }
@@ -544,11 +551,13 @@ result.forEach(item => {
   if (!item.origin && item.follow === true) { // check if its a possible navigation component
     var possibleNavs = navs.filter(function(i) {if (item.name === i.name) return i}) // check if its defined among navigation components
     if (possibleNavs[0]) {
+      setGID();
       var newChild = [{ // creates new child that substitutes the current
-        id: item.id+1,
+        id: getGID(),
         name: possibleNavs[0].content,
         type: "Navigational",
         children: item.children,
+        myUri: possibleNavs[0].myUri,
         origin: undefined,
         follow: true
       }]
@@ -560,7 +569,7 @@ result.forEach(item => {
       if (possibleRoutes[0]) {
         item.origin = "react-navigation"
         item.follow = "false"
-        item.children = processRoutes(possibleRoutes[0].content, item.id)
+        item.children = processRoutes(possibleRoutes[0].content, item.id+1, possibleRoutes[0].myUri)
       } else {
         item.origin = undefined;
         item.follow = false;
@@ -574,4 +583,14 @@ result.forEach(item => {
 
 return result;
 
+}
+
+// Helper methods to get and set and ID of components
+
+export function setGID() {
+  G_ID++;
+}
+
+export function getGID() {
+  return G_ID;
 }

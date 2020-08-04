@@ -22,3 +22,20 @@
     stroke:steelblue;
     cursor: pointer;
   }
+
+  .plusButton {
+    background-color: white;
+    padding: 2px;
+    font: 18px sans-serif;
+    stroke:steelblue;
+    cursor: pointer;
+  }
+
+  input {border: 1px dotted #ccc; background: white; font-family: monospace; padding: 10px 20px; font-size: 18px; margin: 20px 10px 20px 0; color: red; display: none;}
+
+  button {border: 1px dotted #ccc; background: white; font-family: monospace; padding: 10px 20px; font-size: 18px; margin: 20px 10px 20px 0; color: red; }
+
+  .alert {
+    display: none;
+    color: red;
+  }

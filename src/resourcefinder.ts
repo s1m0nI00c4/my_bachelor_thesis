@@ -2,21 +2,28 @@ import { TextDecoder } from 'util';
 import * as vscode from 'vscode';
 import {Node} from './parser';
 
-export async function findResources(components: Node[]): Promise<Node[]> {
+interface Resource {
+  myUri: vscode.Uri;
+  myContent: string;
+}
+
+export async function findResources(components: Node[], oldUri: vscode.Uri): Promise<Node[]> {
     var result = components;
     for (var item of result) {
       if (item.origin && item.follow===true) {
-        item.blob = await openResources(item.origin);
+        var resourceResult = await openResources(item.origin, oldUri);
+        item.blob = resourceResult.myContent;
+        item.myUri = resourceResult.myUri;
       }
       if (item.children) {
-        item.children = await findResources(item.children);
+        item.children = await findResources(item.children, oldUri);
       }
     }
     return result;
   }
   
-export async function openResources(resource: string) {
-  var result: string = "";
+export async function openResources(resource: string, oldUri: vscode.Uri) {
+  var result: Resource = {myUri: oldUri, myContent: ""};
   var patt1 = /\/\w+.js/;
   var obj1 = patt1.exec(resource);
     if (obj1) {
@@ -33,12 +40,11 @@ export async function openResources(resource: string) {
   return result;
 }
   
-export async function contentReader(filename: String) {
+export async function contentReader(filename: String): Promise<Resource> {
   
   var decoder = new TextDecoder('utf-8');
-  var result = vscode.workspace.findFiles("**" + filename, '**/node_modules/**', 10)
-  .then(result1 => vscode.workspace.fs.readFile(result1[0]))
+  var myUriArray = await vscode.workspace.findFiles("**" + filename, '**/node_modules/**', 10);
+  var myContent = await vscode.workspace.fs.readFile(myUriArray[0])
   .then(result2 => decoder.decode(result2))
-  return result;
-  
+  return {myUri: myUriArray[0], myContent: myContent};
 }

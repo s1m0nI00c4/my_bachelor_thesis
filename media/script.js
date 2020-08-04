@@ -1,12 +1,12 @@
-function myFunction(treeData) {
-
-  const vscode = acquireVsCodeApi();
+const vscode = acquireVsCodeApi();
   /*setInterval(() => {
               vscode.postMessage({
                   command: 'alert',
                   text: '🐛  on line '
               });
   }, 1000);*/
+
+function myFunction(treeData) {
   
   var legenda = [
     {
@@ -28,14 +28,19 @@ function myFunction(treeData) {
       "name": "Other components",
       "color": "black",
       "position": 4,
+    },
+    {
+      "name": "User defined",
+      "color": "violet",
+      "position": 5,
     }
   ];
 
 
   // ************** Generate the tree diagram	 *****************
   var margin = {top: 20, right: 20, bottom: 20, left: 120},
-    width = 960 - margin.right - margin.left,
-    height = 720 - margin.top - margin.bottom;
+    width = 960 + margin.right + margin.left,
+    height = 720 + margin.top + margin.bottom;
     
   var i = 0,
     duration = 750,
@@ -43,9 +48,8 @@ function myFunction(treeData) {
 
   var tree = d3.layout.tree()
     .size([height, width]);
-
-  var diagonal = d3.svg.diagonal()
-    .projection(function(d) { return [d.y, d.x]; });
+  
+  d3.select("svg").remove();
 
   var svg = d3.select("body").append("svg")
     .attr("width", width + margin.right + margin.left)
@@ -58,8 +62,8 @@ function myFunction(treeData) {
   root.y0 = 0;
 
   root.children.forEach(collapse);
-    
-  update(root);
+  
+  update(root); // shows the view
 
   d3.select(self.frameElement).style("height", "720px");
 
@@ -73,20 +77,21 @@ function myFunction(treeData) {
 
   function click(d) {
     if (d.children) {
-      d._children = d.children;
-      d.children = null;
-      height = height -180;
-      width = width - (d._children.length-1)*180;
+        d._children = d.children;
+        d.children = null;
+        height = height -180;
+        width = width - (d._children.length-1)*180;
     } else {
-      d.children = d._children;
-      d._children = null;
-      height = height + 180;
-      width = width + (d.children.length-1)*180;
+      if (d._children.length > 0) {
+        d.children = d._children;
+        d._children = null;
+        height = height + 180;
+        width = width + (d.children.length-1)*180;
+      }
     }
-    console.log(d.myUri);
     d3.select("svg").attr("width", width)
        .attr("height", height);
-    update(d);
+    update(root);
 
   }
 
@@ -96,11 +101,8 @@ function myFunction(treeData) {
     }
     else {
       d.on = true;
-      console.log(d.on);
     }
-    console.log(d.myUri.path);
-    console.log(d.myUri.scheme);
-    update(d);
+    update(root);
   }
 
   function defineColor(d) {
@@ -110,8 +112,10 @@ function myFunction(treeData) {
         result = "red";
       } else if (d.origin === "react-native") {
         result = "green";
-      } else if (d.origin === "react-navigation" || d.type === "Navigational") {
+      } else if (d.origin === "react-navigation" || d.type === "Navigational"|| d.name === "AppContainer") {
         result = "yellow";
+      } else if (d.origin === "user-defined") {
+        result = "violet";
       }
 
     } else {
@@ -121,12 +125,81 @@ function myFunction(treeData) {
   }
 
   function openDoc(d) {
-    console.log(vscode);
     vscode.postMessage({
       command: 'alert',
       text: d.myUri.path,
     });
   }
+
+  function defineURL(d) {
+    result = "";
+    if (d.origin === "unstated") {
+      result = "https://github.com/jamiebuilds/" + d.origin;
+    } else if (d.origin === "react-native") {
+      result = "https://reactnative.dev/docs/" + d.name.toLowerCase();
+    } else if (d.origin === "react-navigation" || d.type === "Navigational" || d.name === "AppContainer") {
+      result = "https://reactnavigation.org/docs/getting-started";
+    } else {
+    result = "https://www.google.com"
+    }
+    return result;
+  }
+
+function addNode(d) {
+  var newNode = [];
+  if (newChild[0]) {
+    newNode[0] = newChild[0];
+  } else {
+    newNode.push({
+      name: "Some component",
+      id: d.id,
+      type: "User defined",
+      origin: "user-defined",
+      content: "Some content",
+      children: [],
+      _children: [],
+      myUri: null,
+      on: false
+    })
+  }
+  if (d.id === root.id) {
+    console.log("ok");
+    root.children.push(newNode[0]);
+  } 
+  else {
+    if (root.children) {
+      root.children.forEach(function(child){
+        traverseToAdd(child, d, newNode[0]);
+      })
+    }
+  }
+  displayMod = false;       // We're not in editing mode anymore  
+  var x = document.getElementsByClassName("alert");
+  for (var i = 0; i < x.length; i++) {
+    x[i].style.display = "none";
+  }
+  var y = document.getElementById("editButton");
+  y.style.display = "block";
+  update(root);             // We update the view
+  
+}
+//This method recursively traverses the tree, stops if it finds the parent and pushes a child to it, otherwise travels up to the (shown) leaves.
+//If the parent node is closed, the child is added nontheless, but it's hidden (the parent needs to be opened for the child to show up).
+function traverseToAdd (current, target, newNode) {
+  if (current.id === target.id) {
+    if (current.children) {
+      current.children.push(newNode);
+    } else {
+      current._children.push(newNode);
+    }
+  } else {
+    if (current.children)
+    current.children.forEach(function(c) {
+      traverseToAdd(c, target, newNode);
+    })
+  }
+}
+
 
   function update(source) {
 
@@ -153,7 +226,7 @@ function myFunction(treeData) {
              .attr("transform", function(d) {return "translate(" + 15 + "," + 4 + ")";});
 
     // Compute the new tree layout.
-    var nodes = tree.nodes(root).reverse()
+    var nodes = tree.nodes(source).reverse()
     nodes.forEach(function(d){ d.y = d.depth * 180});
     var links = tree.links(nodes);
  
@@ -164,6 +237,7 @@ function myFunction(treeData) {
                   .append("g")
                     .attr("class", "node")
                     .attr("transform", function(d) {return "translate(" + d.x + "," + d.y + ")";})
+    // Every node is a circle
     node.append("circle")
         .attr("r", 10)
         .attr("fill", defineColor) 
@@ -171,29 +245,52 @@ function myFunction(treeData) {
         .attr("stroke-width", "1px")
         .on("click", click)
         .style("cursor", "pointer");
+    // + which allows to add a node as a child to this node. It is shown depending on the displaymod status, i.e. if we're in editing mode
+    node.append("text")
+        .text("+")
+        .attr("class", "plusButton")
+        .on("click", addNode)
+        .attr("transform", function(d) {return "translate(" + -30 + "," + 8 + ")";})
+        .style("display", function() {return displayMod ? "block" : "none"});
+    // Node name
     node.append("text")
         .text(function(d) {return d.name})
         .attr("class", "nodeName")
         .attr("transform", function(d) {return "translate(" + 15 + "," + 4 + ")";});
+    // +/- symbol which hides/shows the node's details
     node.append("text")
         .text(function(d) {return d.on ? "-" : "+"})
         .attr("class", "plus")
         .attr("transform", function(d) {return "translate(" + 15 + "," + 20 + ")";})
         .on("click", toggle)
         .style("cursor", "pointer");
+    // Text for the tag content
     node.append("text")
         .text(function(d) {return d.on ? d.content : ""})
         .attr("class", "nodeContent")
         .attr("transform", function(d) {return "translate(" + 15 + "," + 36 + ")";});
+    // Text for the tag ID
     node.append("text")
-        .text(function(d) {return d.on ? "OPEN" : ""})
-        .attr("transform", function(d) {return "translate(" + 15 + "," + 52 + ")";})
+        .text(function(d) {return d.on ? "ID: " + d.id : ""})
+        .attr("class", "nodeContent")
+        .attr("transform", function(d) {return "translate(" + 15 + "," + 52 + ")";});
+    // Button to open the local file containing the tag
+    node.append("text")
+        .text(function(d) {return d.on ? "OPEN LOCAL FILE" : ""})
+        .attr("transform", function(d) {return "translate(" + 15 + "," + 68 + ")";})
         .attr("class", "button")
         .on("click", openDoc)
+    //Button to show outside documentation
+    var nodeLinks = node.append("a")
+        .attr("transform", function(d) {return "translate(" + 15 + "," + 84 + ")";})
+        .attr("xlink:href", defineURL);
+    nodeLinks.append("text")
+        .text(function(d) {return d.on ? "OPEN DOCUMENTATION" : ""})
+        .attr("class", "button")
 
     var diagonal = d3.svg.diagonal();
 
-    links.forEach(function(d) { console.log("source " + d.source.x + " " + d.source.y + " target " + d.target.x + " " + d.target.y)})
+    //links.forEach(function(d) { console.log("source " + d.source.x + " " + d.source.y + " target " + d.target.x + " " + d.target.y)})
 
     svg.selectAll(".link")
           .data(links)
@@ -316,4 +413,55 @@ function myFunction(treeData) {
     update(d);*/
   }
 
+}
+
+var newChild = [];
+var displayMod = false;
+
+function handleClick(treeData) {
+  newChild = [];
+  newChild.push({
+    name: document.getElementById("name").value ? document.getElementById("name").value : "New name",
+    content: document.getElementById("content").value ? document.getElementById("content").value : "New content",
+    id: document.getElementById("id").value ? document.getElementById("id").value : 0,
+    type: "User defined",
+    origin: "user-defined",
+    children: [],
+    _children: [],
+    myUri: null,
+    on: false
+  })
+  displayMod = true;    //now we need to decide where to add our new node
+  myFunction(treeData); //we update the SVG
+  toggleForm();         //we hide the form
+  var x = document.getElementsByClassName("alert");
+  for (var i = 0; i < x.length; i++) {
+    x[i].style.display = "block";
+  }
+}
+
+// method to show/hide the form for adding a new node. Gets shown when someone clicks on the relative button. Gets hidden as soon as someone submits the form.
+
+var form = false;
+
+function toggleForm() {
+  var x = document.getElementsByTagName("input");
+  for (var i = 0; i < x.length; i++) {
+    if (form === true) {
+      x[i].style.display = "none";
+    } else {
+      x[i].style.display = "inline";
+    }
+  }
+  form = !form;
+} 
+
+function toggleEditMode() {
+  toggleForm();
+  var x = document.getElementById("editButton");
+  if (x.style.display === "none") {
+    x.style.display = "block";
+  } else {
+    x.style.display = "none";
+  }
 }
