@@ -39,9 +39,14 @@ interface Exports {
   content?: string;
 }
 
-export async function parseDoc(str: string, myURI: vscode.Uri, id: number) {
+export async function parseDoc(str: string, myURI: vscode.Uri, id: number, root: Node|null) {
 
-    var result: Node[] = [];
+    //If this is the first pass, then we put the root on top of our
+    if (root) {
+      var result: Node[] = [root];
+    } else {
+      var result: Node[] = [];
+    }
 
     var imports: Dependencies[] = parseForImports(str, []);
     //console.log("My imports");
@@ -51,7 +56,7 @@ export async function parseDoc(str: string, myURI: vscode.Uri, id: number) {
     //console.log(processedImports);
 
     var myConsts: Consts[] = parseForConst(str, myURI);
-    //console.log("My consts")
+    //console.log("My consts");
     //console.log(myConsts);
   
     var myExports = parseForExports(str);
@@ -81,7 +86,12 @@ export async function parseDoc(str: string, myURI: vscode.Uri, id: number) {
       var allResources: Node[] = await ResourceFinder.findResources(withNavigation2, myURI);
       //console.log("All Resources:");
       //console.log(allResources);
-      result = allResources;
+      
+      if (root) {
+        result[0].children = allResources;
+      } else {
+        result = allResources;
+      }
       }
     } else {
       var myComponents: Node[] = [];
@@ -102,7 +112,11 @@ export async function parseDoc(str: string, myURI: vscode.Uri, id: number) {
         var allResources: Node[] = await ResourceFinder.findResources(withNavigation2, myURI);
         //console.log("All Resources:");
         //console.log(allResources);
-        result = allResources;
+        if (root) {
+          result[0].children = allResources;
+        } else {
+          result = allResources;
+        }
     }
 
     return result
@@ -115,7 +129,7 @@ export async function repeatParseDoc(initial: Node[]): Promise<Node[]> {
     if (item.blob && (!item.children || item.children.length === 0)) {
       //console.log("LEAF: " + item.name)
 
-      item.children = await parseDoc(item.blob, item.myUri, item.id);
+      item.children = await parseDoc(item.blob, item.myUri, item.id, null);
       item.blob = "";
 
     } 
@@ -492,6 +506,7 @@ function parseForConst(str: string, myUri: vscode.Uri): Consts[] {
   var patt2 = /const\s*\w+\s*=\s*{[^}]*}/g //Catches an object, usually a route
   var patt3 = /const\s*\w+\s*=\s*\([^)]*\)\s*=>\s*/g // Catches functional components (but NOT what's in their parentheses, just the header)
   var patt4 = /\w+/ // Catches the first word.
+  var patt5 = /const\s*\w+\s*=\s*[^m]*[^a]*[^p]*\.map\(/ //Catches lists of components defined as consts, produced with the map() method
   var result: Consts[] = [];
   var obj1 = str.match(patt1);
   if (obj1) { // Looks for navigation components, extracts their name and the first argument (routes)
@@ -531,6 +546,21 @@ function parseForConst(str: string, myUri: vscode.Uri): Consts[] {
     var name = patt4.exec(stringedName.slice(5));
     var content = Helper.balancedParentheses(str.slice(match.index + match.length), "{");
     var type = "Functional element";
+    if (name) {
+      result.push({
+        name: name[0],
+        content: content,
+        type: type,
+        myUri: myUri
+      })
+    }
+  }
+  var match2 = patt5.exec(str);
+  if (match2) {
+    var stringedName = match2.toString();
+    var name = patt4.exec(stringedName.slice(5));
+    var content = Helper.balancedParentheses(str.slice(match2.index + match2.length), "{");
+    var type = "List";
     if (name) {
       result.push({
         name: name[0],
@@ -593,4 +623,31 @@ export function setGID() {
 
 export function getGID() {
   return G_ID;
+}
+
+//Helper methods to create the root node
+
+export function createRootNode(origin: vscode.Uri): Node {
+  const patt1 =  /[^\/]*.js/;
+  var name = patt1.exec(origin.path);
+  var result: Node = {
+    id: -1,
+    name: "",
+    content: "",
+    children: [],
+    myUri: origin,
+    type: "Origin",
+  }
+  if (name) { 
+  result = {
+    id: getGID(),
+    name: name[0].slice(0,-3),
+    content: "",
+    children: [],
+    myUri: origin,
+    type: "Origin",
+  } 
+  }
+  setGID();
+  return result;
 }

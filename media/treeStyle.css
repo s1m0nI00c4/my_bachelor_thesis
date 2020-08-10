@@ -1,3 +1,10 @@
+  h1 {
+    font: 18px sans-serif;
+    fill: white;
+    text-transform: uppercase;
+    text-align: center;
+  }
+  
   .nodeName {
     font: 12px sans-serif;
     fill: white;
@@ -43,7 +50,17 @@
 
   button {border: 1px dotted #ccc; background: white; font-family: monospace; padding: 10px 20px; font-size: 18px; margin: 20px 10px 20px 0; color: red; }
 
+  #refresh {
+    background: green;
+    color: white;
+  }
+
   .alert {
     display: none;
     color: red;
   }
+
+   #loadingText {
+     display: inline;
+     color: lightgray;
+   }
