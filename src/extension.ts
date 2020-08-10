@@ -28,6 +28,20 @@ async function computeJSON() {
 
 export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
+		vscode.commands.registerCommand('RNVisualizer.start', () => {
+			RNVPanel.createOrShow(context.extensionPath);
+		})
+  );
+  if (vscode.window.registerWebviewPanelSerializer) {
+		// Make sure we register a serializer in activation event
+		vscode.window.registerWebviewPanelSerializer(RNVPanel.viewType, {
+			async deserializeWebviewPanel(webviewPanel: vscode.WebviewPanel, state: any) {
+				console.log(`Got state: ${state}`);
+				RNVPanel.revive(webviewPanel, context.extensionPath);
+			}
+		});
+	}
+  /*context.subscriptions.push(
     vscode.commands.registerCommand('RNVisualizer.start', async () => {
 
       var myResult = await computeJSON();
@@ -89,43 +103,150 @@ export function activate(context: vscode.ExtensionContext) {
       console.log(`Got state: ${state}`);
       webviewPanel.webview.html = getWebviewContent([], "");
     }
+*/
 }
 
-function getWebviewContent(params: vscode.Uri[], content: string) { 
+class RNVPanel {
+  public static currentPanel: RNVPanel | undefined;
+  public static readonly viewType = 'RNVisualizer';
+  private readonly _panel: vscode.WebviewPanel;
+  private readonly _extensionPath: string;
+  private _disposables: vscode.Disposable[] = [];
+  
+  public static createOrShow(extensionPath: string) {
+		const column = vscode.window.activeTextEditor
+			? vscode.window.activeTextEditor.viewColumn
+      : undefined;
+    // If we already have a panel, show it.
+		if (RNVPanel.currentPanel) {
+			RNVPanel.currentPanel._panel.reveal(column);
+			return;
+    }
+    // Otherwise, create a new panel.
+		const panel = vscode.window.createWebviewPanel(
+			RNVPanel.viewType,
+			'React Native Visualizer',
+			column || vscode.ViewColumn.One,
+			{
+				// Enable javascript in the webview
+        enableScripts: true,
+        retainContextWhenHidden: true,
+			}
+    );
+    RNVPanel.currentPanel = new RNVPanel(panel, extensionPath);
+  }
 
-  return `
-  <!DOCTYPE html>
-  <html lang="en">
-    <head>
-      <meta charset="utf-8">
-      <title>Tree Example</title>
-      <link rel = "stylesheet" type = "text/css" href = "${params[1]}" />
-    </head>
-    <body>
-      <script src="http://d3js.org/d3.v3.min.js"></script>
-      <script src="${params[0]}"></script>
-      <h1>React Native Visualizer</h1>
-      <button type="button" id="editButton" onclick="toggleEditMode()">Add node!</button>
-      <button type="button" id="removeButton" onclick="toggleRemoveMode()">Remove node!</button>
-      <button type="button" id="refresh" onclick="handleRefresh()">Refresh tree</button>
-      <p id="loadingText"></p>
-      <p class="alert">Click on the blue plus to add your new node to the desired parent</p>
-      <form name="myform" onSubmit="return handleClick()">
-            <input type="text" id="name" placeholder="Node name">
-            <input type="text" id="content" placeholder="Node content">
-            <input type="number" id="id" min="0" placeholder="Node id">
-            <input name="Submit"  type="submit" value="Add to graph" >
-      </form>
-      <script>
-        myFunction(${content});
-      </script>
-      <script>
-        function handleRefresh() {
-          document.getElementById("loadingText").innerHTML = "Loading...";
-          refresh();
+  public static revive(panel: vscode.WebviewPanel, extensionPath: string) {
+		RNVPanel.currentPanel = new RNVPanel(panel, extensionPath);
+  }
+  
+  private constructor(panel: vscode.WebviewPanel, extensionPath: string) {
+    this._panel = panel;
+    this._extensionPath = extensionPath;
+    // Set the webview's initial html content
+    this._update();
+    // Listen for when the panel is disposed. This happens when the user closes the panel or when the panel is closed programatically
+    this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
+    // Update the content based on view changes
+		this._panel.onDidChangeViewState(
+			e => {
+				if (this._panel.visible) {
+					this._update();
+				}
+			},
+			null,
+			this._disposables
+    );
+    // Handle messages from the webview
+    this._panel.webview.onDidReceiveMessage(
+      async message => {
+        switch (message.command) {
+          case 'alert':
+            vscode.workspace.openTextDocument(message.text)
+            .then(resultA => vscode.window.showTextDocument(resultA,1,false));
+            break;
+          case 'refresh':
+            var myNewResult = await computeJSON();
+            this._panel.webview.html = this._getHtmlForWebview(this._panel.webview, myNewResult);
+            break;
         }
-      </script>
-    </body>
-  </html>
-`;
+      },
+      null,
+      this._disposables
+    );
+
+  }
+
+  public dispose() {
+		RNVPanel.currentPanel = undefined;
+
+		// Clean up our resources
+		this._panel.dispose();
+
+		while (this._disposables.length) {
+			const x = this._disposables.pop();
+			if (x) {
+				x.dispose();
+			}
+		}
+  }
+  
+  private async _update() {
+    const webview = this._panel.webview;
+    var myResult = await computeJSON();
+    this._panel.title = "React Native Visualizer";
+		this._panel.webview.html = this._getHtmlForWebview(webview, myResult);
+  }
+  
+  private _getHtmlForWebview(webview: vscode.Webview, content: string) {
+    
+    // Local path to main script run in the webview
+		const scriptPathOnDisk = vscode.Uri.file(
+      path.join(this._extensionPath, 'media', 'script.js')
+    );
+		// And the uri we use to load this script in the webview
+    const scriptUri = webview.asWebviewUri(scriptPathOnDisk);
+    
+    const cssPathOnDisk = vscode.Uri.file(
+      path.join(this._extensionPath, 'media', 'treeStyle.css')
+    );
+    const cssUri = webview.asWebviewUri(cssPathOnDisk);
+
+    return `
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charset="utf-8">
+        <title>Tree Example</title>
+        <link rel = "stylesheet" type = "text/css" href = "${cssUri}" />
+      </head>
+      <body>
+        <script src="http://d3js.org/d3.v3.min.js"></script>
+        <script src="${scriptUri}"></script>
+        <h1>React Native Visualizer</h1>
+        <button type="button" id="editButton" onclick="toggleEditMode()">Add node!</button>
+        <button type="button" id="removeButton" onclick="toggleRemoveMode()">Remove node!</button>
+        <button type="button" id="refresh" onclick="handleRefresh()">Refresh tree</button>
+        <p id="loadingText"></p>
+        <p class="alert">Click on the blue plus to add your new node to the desired parent</p>
+        <form name="myform" onSubmit="return handleClick()">
+              <input type="text" id="name" placeholder="Node name">
+              <input type="text" id="content" placeholder="Node content">
+              <input type="number" id="id" min="0" placeholder="Node id">
+              <input name="Submit"  type="submit" value="Add to graph" >
+        </form>
+        <script>
+          myFunction(${content});
+        </script>
+        <script>
+          function handleRefresh() {
+            document.getElementById("loadingText").innerHTML = "Loading...";
+            refresh();
+          }
+        </script>
+      </body>
+    </html>
+  `;
+  }
+
 }
