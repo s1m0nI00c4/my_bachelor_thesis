@@ -1,4 +1,4 @@
-const vscode = acquireVsCodeApi();
+  var vscode = acquireVsCodeApi();
 
   var legenda = [
     {
@@ -41,6 +41,72 @@ var removeMod = false;
 
 function myFunction(treeData) {
 
+  /* Add editButton */
+  var editButton = document.createElement("button");
+  editButton.innerHTML = "Add node";
+  var body = document.getElementsByTagName("body")[0];
+  body.appendChild(editButton);
+  editButton.addEventListener("click", toggleEditMode);
+
+  /* Add removeButton */
+
+  var removeButton = document.createElement("button");
+  removeButton.innerHTML = "Remove node";
+  body.appendChild(removeButton);
+  removeButton.addEventListener("click", toggleRemoveMode);
+
+  /* Add refreshButton */
+
+  var refreshButton = document.createElement("button");
+  refreshButton.innerHTML = "Refresh tree";
+  body.appendChild(refreshButton);
+  refreshButton.addEventListener("click", handleRefresh);
+  refreshButton.id = "refresh";
+
+  /* Add form */
+
+  var thisForm = document.createElement("form");
+  body.appendChild(thisForm);
+  thisForm.name = "myform";
+  thisForm.onsubmit = handleClick;
+
+  var input1 = document.createElement("input");
+  input1.type = "text";
+  input1.id = "name";
+  input1.placeholder = "Node name";
+  thisForm.appendChild(input1);
+
+  var input2 = document.createElement("input");
+  input2.type = "text";
+  input2.id = "content";
+  input2.placeholder = "Node content";
+  thisForm.appendChild(input2);
+
+  var input3 = document.createElement("input");
+  input3.type = "number";
+  input3.id = "id";
+  input3.placeholder = "Node ID";
+  thisForm.appendChild(input3);
+
+  var input4 = document.createElement("input");
+  input4.type = "submit";
+  input4.id = "submit";
+  input4.placeholder = "Add to graph";
+  thisForm.appendChild(input4);
+
+  /* Add alert */
+
+  var alertText = document.createElement("p");
+  alertText.classList = "alert";
+  alertText.innerHTML = "Click on the blue plus to add your new node to the desired parent";
+  body.appendChild(alertText);
+
+  /* Add loading text */
+
+  var loadingText = document.createElement("p");
+  loadingText.id = "loadingText";
+  body.appendChild(loadingText);
+
 
   // ************** Generate the tree diagram	 *****************
 
@@ -55,19 +121,17 @@ function myFunction(treeData) {
     .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-
   const previousState = vscode.getState();
-  if (previousState) {
-    console.log("INNN");
-    root = previousState.source;
-  } else {
-    root = treeData[0];
-  }
 
+  if (previousState) {
+      root = previousState.src;
+  } else {
+      root = treeData[0];
+      root.children.forEach(collapse);
+  }
   root.x0 = width / 2;
   root.y0 = 0;
-  root.children.forEach(collapse);
-  
+
   update(root); // shows the view
 
   d3.select(self.frameElement).style("height", "720px");
@@ -83,13 +147,13 @@ function collapse(d) {
 }
 
 function click(d) {
-  if (d.children) {
+  if (d.children) { //hide children
       d._children = d.children;
       d.children = null;
       height = height -180;
       width = width - (d._children.length-1)*180;
   } else {
-    if (d._children.length > 0) {
+    if (d._children.length > 0) { //show children
       d.children = d._children;
       d._children = null;
       height = height + 180;
@@ -136,6 +200,11 @@ function openDoc(d) {
     command: 'alert',
     text: d.myUri.path,
   });
+}
+
+function handleRefresh() {
+  document.getElementById("loadingText").innerHTML = "Loading...";
+  refresh();
 }
 
 function refresh() {
@@ -310,6 +379,8 @@ function toggleButtons() {
 
 function update(source) {
 
+  //vscode.setState({src: root});
+
   //remove everything there was before
   svg.selectAll("*").remove();
 
@@ -413,7 +484,5 @@ function update(source) {
         .attr("fill", "none")
         .attr("stroke", "white")
         .attr("d", diagonal);
-
-  vscode.setState({source});
 
 }

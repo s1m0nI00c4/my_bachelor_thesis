@@ -224,25 +224,8 @@ class RNVPanel {
         <script src="http://d3js.org/d3.v3.min.js"></script>
         <script src="${scriptUri}"></script>
         <h1>React Native Visualizer</h1>
-        <button type="button" id="editButton" onclick="toggleEditMode()">Add node!</button>
-        <button type="button" id="removeButton" onclick="toggleRemoveMode()">Remove node!</button>
-        <button type="button" id="refresh" onclick="handleRefresh()">Refresh tree</button>
-        <p id="loadingText"></p>
-        <p class="alert">Click on the blue plus to add your new node to the desired parent</p>
-        <form name="myform" onSubmit="return handleClick()">
-              <input type="text" id="name" placeholder="Node name">
-              <input type="text" id="content" placeholder="Node content">
-              <input type="number" id="id" min="0" placeholder="Node id">
-              <input name="Submit"  type="submit" value="Add to graph" >
-        </form>
         <script>
           myFunction(${content});
-        </script>
-        <script>
-          function handleRefresh() {
-            document.getElementById("loadingText").innerHTML = "Loading...";
-            refresh();
-          }
         </script>
       </body>
     </html>
