@@ -32,13 +32,36 @@ var i = 0;
 var svg;
 var tree;
 var margin = {top: 20, right: 20, bottom: 20, left: 440},
-width = 960 + margin.right + margin.left,
-height = 720 + margin.top + margin.bottom;
+width = 720 + margin.right + margin.left,
+height = 360 + margin.top + margin.bottom;
 var newChild = [];
 var displayMod = false;
 var removeMod = false;
 
-function myFunction(treeData) {
+function myFunction(treeData, refreshMode) {
+
+  // ************** Generate the tree diagram	 *****************
+
+  var vscode = acquireVsCodeApi();
+  const previousState = vscode.getState();
+  console.log(refreshMode);
+
+  if (previousState && !refreshMode) {
+      root = previousState.src;
+      console.log(previousState.height + " - " + previousState.width);
+      height = previousState.height;
+      width = previousState.width;
+  } else {
+      root = treeData[0];
+      root.children.forEach(collapse);
+  }
+
+  setCanvas();
+  setTreeSize();
+
+  update(root); // shows the view
+
+  // ************** Add buttons *****************
 
   /* Add editButton */
   var editButton = document.createElement("button");
@@ -106,36 +129,7 @@ function myFunction(treeData) {
   loadingText.id = "loadingText";
   body.appendChild(loadingText);
 
-
-  // ************** Generate the tree diagram	 *****************
-
-  tree = d3.layout.tree()
-    .size([height, width]);
-  
-  d3.select("svg").remove();
-
-  svg = d3.select("body").append("svg")
-    .attr("width", width + margin.right + margin.left)
-    .attr("height", height + margin.top + margin.bottom)
-    .append("g")
-    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-  var vscode = acquireVsCodeApi();
-  const previousState = vscode.getState();
-
-  if (previousState) {
-      root = previousState.src;
-  } else {
-      root = treeData[0];
-      root.children.forEach(collapse);
-  }
-  root.x0 = width / 2;
-  root.y0 = 0;
-
-  update(root); // shows the view
-
-
-  d3.select(self.frameElement).style("height", "720px");
+  // ************** Functions	 *****************
 
   /* function to handle a click on a single node (expand/collapse) */
   function click(d) {
@@ -148,12 +142,13 @@ function myFunction(treeData) {
       if (d._children.length > 0) { //show children
         d.children = d._children;
         d._children = null;
-        height = height + 180;
-        width = width + (d.children.length-1)*180;
+        height = height + 180;  
+        width = width + (d.children.length-1)*180;   
       }
     }
+    setTreeSize();
     d3.select("svg").attr("width", width)
-       .attr("height", height);
+       .attr("height", height)
     update(root);
   }
 
@@ -313,7 +308,7 @@ function myFunction(treeData) {
 
     // Removes the circular references which causes an error and then saves the new state
     var newSource = removeParent(source);
-    vscode.setState({src: newSource});
+    vscode.setState({src: newSource, height: height, width: width});
   
     //remove everything there was before
     svg.selectAll("*").remove();
@@ -506,4 +501,27 @@ function removeParent(source) {
     }
   }
   return source;
+}
+
+/* This function sets the size of the svg canvas */
+function setCanvas() {
+  
+  d3.select("svg").remove();
+
+  svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height)
+    .attr("display", "block")
+    .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+}
+
+/* This function defines the size of the tree graph */
+function setTreeSize() {
+  tree = d3.layout.tree()
+    .size([height, width]);
+  
+  root.x = width / 2;
+  root.y = 0;
+  
 }

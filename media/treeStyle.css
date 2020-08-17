@@ -2,7 +2,7 @@
     font: 18px sans-serif;
     fill: white;
     text-transform: uppercase;
-    text-align: center;
+    text-align: left;
   }
   
   .nodeName {
@@ -11,6 +11,7 @@
     text-transform: uppercase;
   }
 
+  
   .nodeContent {
     margin-top: 10px;
     font: 10px sans-serif;

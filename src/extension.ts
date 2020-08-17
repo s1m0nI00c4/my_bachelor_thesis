@@ -167,7 +167,7 @@ class RNVPanel {
             break;
           case 'refresh':
             var myNewResult = await computeJSON();
-            this._panel.webview.html = this._getHtmlForWebview(this._panel.webview, myNewResult);
+            this._panel.webview.html = this._getHtmlForWebview(this._panel.webview, myNewResult, true);
             break;
         }
       },
@@ -195,10 +195,10 @@ class RNVPanel {
     const webview = this._panel.webview;
     var myResult = await computeJSON();
     this._panel.title = "React Native Visualizer";
-		this._panel.webview.html = this._getHtmlForWebview(webview, myResult);
+		this._panel.webview.html = this._getHtmlForWebview(webview, myResult, false);
   }
   
-  private _getHtmlForWebview(webview: vscode.Webview, content: string) {
+  private _getHtmlForWebview(webview: vscode.Webview, content: string, refresh: boolean) {
     
     // Local path to main script run in the webview
 		const scriptPathOnDisk = vscode.Uri.file(
@@ -225,7 +225,7 @@ class RNVPanel {
         <script src="${scriptUri}"></script>
         <h1>React Native Visualizer</h1>
         <script>
-          myFunction(${content});
+          myFunction(${content}, ${refresh});
         </script>
       </body>
     </html>
