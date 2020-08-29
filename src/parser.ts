@@ -1,7 +1,6 @@
 import {processImports, processRoutes, processReturns} from "./processor";
 import * as Helper from "./helper";
 import * as vscode from 'vscode';
-import { TextDecoder } from 'util';
 import * as ResourceFinder from './resourcefinder';
 var G_ID = 0;
 
@@ -14,6 +13,7 @@ export interface Node {
   origin?: string;
   follow?: boolean;
   blob?: string;
+  props?: Props[];
   myUri: vscode.Uri;
 }
 
@@ -37,6 +37,12 @@ interface Exports {
   default: boolean;
   type: string;
   content?: string;
+}
+
+interface Props {
+  name: string;
+  value: string;
+  doc: string;
 }
 
 export async function parseDoc(str: string, myURI: vscode.Uri, id: number, root: Node|null) {
@@ -401,6 +407,7 @@ function parseForImports(str: string, arr: Array<string>): Dependencies[] {
     var patt3 = /<[A-Z][A-Za-z]*[^(\/>)]*\/>/; //Standalone component
     var patt4 = /<\/\w+>/; //Closer of a wrapper
     var patt5 = /<Text[^>]*>[^<]*/; //Text tag
+    var patt6 = /<[A-Z][A-Za-z]*[^\/]*(\/|^\/)[^\/]*\/>/ //FlatList or List tag
     var JSONResult: Node[] = [];
     var newId = id+1;
     var item = null;
@@ -412,6 +419,13 @@ function parseForImports(str: string, arr: Array<string>): Dependencies[] {
           var ifText = stringToParse.slice(item.index).match(patt5);
           if (ifText) {
             item[0] = ifText[0];
+          }
+          if (name[0] === "FlatList" || name[0] === "List") {
+            //console.log("Yeah");
+            var listContent = stringToParse.match(patt6);
+            if (listContent) {
+              item[0] = listContent[0];
+            }
           }
           JSONResult.push(
             {
@@ -453,6 +467,8 @@ function parseForImports(str: string, arr: Array<string>): Dependencies[] {
           }
         }
     }
+  
+  JSONResult = lookForProps(JSONResult);
 
    return hierarchify(JSONResult);
    //return JSONResult;
@@ -650,4 +666,41 @@ export function createRootNode(origin: vscode.Uri): Node {
   }
   setGID();
   return result;
+}
+
+function lookForProps(JSONResult: Node[]): Node[] {
+  var newResult = JSONResult;
+  newResult.forEach(item => {
+    if (item.type === "Opener" || item.type === "Standalone") {
+      item.props = compileProp(item.content, item.name);
+      //console.log(item.props);
+      }
+    })
+  return newResult;
+}
+
+function compileProp(str: string, name: string): Props[] {
+  var patt1 = /\w+={(\s|\S)*/; 
+  var patt2 = /\w+/;
+  var propArr: Props[] = [];
+  var length = str.length;
+  var propSearch = patt1.exec(str);
+    if (propSearch) {
+      var propNameSearch = patt2.exec(propSearch[0]);
+      var propValueSearch = Helper.balancedParentheses(propSearch[0], "{");
+        if (propNameSearch && propValueSearch) {
+          length = 3 + propNameSearch[0].length + propValueSearch.length;
+          propArr.push({
+            name: propNameSearch[0],
+            value: propValueSearch,
+            doc: "https://reactnative.dev/docs/" + name.toLowerCase() + "#" + propNameSearch[0],
+         })
+       }
+      if (length < propSearch[0].length) {
+        var newStr = propSearch[0].slice(length);
+        var otherProps = compileProp(newStr, name);
+        propArr = propArr.concat(otherProps);
+      }
+    }
+  return propArr;
 }

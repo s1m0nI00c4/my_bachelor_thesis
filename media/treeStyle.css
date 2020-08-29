@@ -1,3 +1,7 @@
+  svg {
+    border: 1px solid white;
+  }
+  
   h1 {
     font: 18px sans-serif;
     fill: white;
@@ -16,6 +20,15 @@
     margin-top: 10px;
     font: 10px sans-serif;
     fill: white;
+  }
+
+  .prop {
+    font: 10px sans-serif;
+    fill: white;
+    text-decoration: underline;
+    text-decoration-color: white;
+    text-decoration-style: double;
+    text-decoration-thickness: 100;
   }
 
   .legenda, .plus {
@@ -49,11 +62,20 @@
 
   input {border: 1px dotted #ccc; background: white; font-family: monospace; padding: 10px 20px; font-size: 18px; margin: 20px 10px 20px 0; color: red; display: none;}
 
-  button {border: 1px dotted #ccc; background: white; font-family: monospace; padding: 10px 20px; font-size: 18px; margin: 20px 10px 20px 0; color: red; }
+  .startingPointInput {
+    display: none;
+  }
+
+  #startingPointName {
+    width: 540px;
+  }
+
+  button {border: 1px dotted #ccc; background: white; font-family: monospace; padding: 10px 20px; font-size: 18px; margin: 20px 10px 20px 0; color: red; display: inline; }
 
   #refresh {
     background: green;
     color: white;
+    display: inline;
   }
 
   .alert {
@@ -62,6 +84,14 @@
   }
 
    #loadingText {
-     display: inline;
+     display: none;
      color: lightgray;
+   }
+
+   #spToggle {
+     display: block;
+     color: lightgrey;
+     text-decoration: underline;
+     font-weight: bold;
+     cursor: pointer;
    }

@@ -4,11 +4,11 @@ import { TextDecoder } from 'util';
 import {parseDoc, repeatParseDoc, createRootNode} from './parser';
 import {findEntryPoint} from './entrypointfinder';
 
-async function computeJSON() {
+async function computeJSON(startingPoint: string) {
 
   var decoder = new TextDecoder('utf-8');
 
-  var myURIArray = await vscode.workspace.findFiles("**/App.js", '**/node_modules/**', 10);
+  var myURIArray = await vscode.workspace.findFiles("**/"+startingPoint, '**/node_modules/**', 10);
 
   // Computes the name of the rootNode
   var myRoot = createRootNode(myURIArray[0]);
@@ -21,7 +21,7 @@ async function computeJSON() {
   .then(result2 => parseDoc(decoder.decode(result2), myURIArray[0], 0, myRoot))
   .then(result3 => repeatParseDoc(result3))
   .then(result4 => {return JSON.stringify(result4)})
-  console.log(JSON.parse(await myResult));
+  //console.log(JSON.parse(await myResult));
   return myResult;
 
 }
@@ -166,7 +166,8 @@ class RNVPanel {
             .then(resultA => vscode.window.showTextDocument(resultA,1,false));
             break;
           case 'refresh':
-            var myNewResult = await computeJSON();
+            console.log(message.text);
+            var myNewResult = await computeJSON(message.text);
             this._panel.webview.html = this._getHtmlForWebview(this._panel.webview, myNewResult, true);
             break;
         }
@@ -193,7 +194,7 @@ class RNVPanel {
   
   private async _update() {
     const webview = this._panel.webview;
-    var myResult = await computeJSON();
+    var myResult = await computeJSON("App.js");
     this._panel.title = "React Native Visualizer";
 		this._panel.webview.html = this._getHtmlForWebview(webview, myResult, false);
   }

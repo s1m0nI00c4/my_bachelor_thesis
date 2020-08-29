@@ -1,31 +1,3 @@
-   var legenda = [
-    {
-      "name": "State Management",
-      "color": "red",
-      "position": 0,
-    },
-    {
-      "name": "Navigation",
-      "color": "yellow",
-      "position": 1,
-    },
-    {
-      "name": "React Native",
-      "color": "green",
-      "position": 2,
-    },
-    {
-      "name": "Other components",
-      "color": "black",
-      "position": 3,
-    },
-    {
-      "name": "User defined",
-      "color": "violet",
-      "position": 4,
-    }
-  ];
-
 var form = false;
 var root;
 var i = 0;
@@ -37,20 +9,54 @@ height = 360 + margin.top + margin.bottom;
 var newChild = [];
 var displayMod = false;
 var removeMod = false;
+var startingPointMod = false;
+var startingPoint;
+var propsOpen = false;
+var myProps;
 
 function myFunction(treeData, refreshMode) {
+
+  // ************** Starting point	 *****************
+
+  var body = document.getElementsByTagName("body")[0];
+  var spToggle = document.createElement("p");
+  spToggle.innerHTML = "Change starting point";
+  spToggle.id = "spToggle";
+  body.appendChild(spToggle);
+  spToggle.onclick = toggleStartingPointForm;
+
+  var SPForm = document.createElement("form");
+  body.appendChild(SPForm);
+  SPForm.name = "StartingPointForm";
+  SPForm.onsubmit = setStartingPoint;
+
+  var input5 = document.createElement("input");
+  input5.type = "text";
+  input5.id = "startingPointName";
+  input5.placeholder = "Enter the starting point of your App (f.e. 'App.js')";
+  input5.classList = "startingPointInput";
+  input5.width = 360;
+  SPForm.appendChild(input5);
+
+  var input6 = document.createElement("input");
+  input6.type = "submit";
+  input6.id = "startingPointSubmit";
+  input6.value = "Submit";
+  input6.classList = "startingPointInput";
+  SPForm.appendChild(input6);
 
   // ************** Generate the tree diagram	 *****************
 
   var vscode = acquireVsCodeApi();
   const previousState = vscode.getState();
-  console.log(refreshMode);
 
   if (previousState && !refreshMode) {
       root = previousState.src;
       console.log(previousState.height + " - " + previousState.width);
       height = previousState.height;
       width = previousState.width;
+      startingPoint = previousState.sp;
+      console.log(startingPoint);
   } else {
       root = treeData[0];
       root.children.forEach(collapse);
@@ -66,7 +72,6 @@ function myFunction(treeData, refreshMode) {
   /* Add editButton */
   var editButton = document.createElement("button");
   editButton.innerHTML = "Add node";
-  var body = document.getElementsByTagName("body")[0];
   body.appendChild(editButton);
   editButton.addEventListener("click", toggleEditMode);
 
@@ -113,7 +118,7 @@ function myFunction(treeData, refreshMode) {
   var input4 = document.createElement("input");
   input4.type = "submit";
   input4.id = "submit";
-  input4.placeholder = "Add to graph";
+  input4.value = "Add to graph";
   thisForm.appendChild(input4);
 
   /* Add alert */
@@ -122,12 +127,6 @@ function myFunction(treeData, refreshMode) {
   alertText.classList = "alert";
   alertText.innerHTML = "Click on the blue plus to add your new node to the desired parent";
   body.appendChild(alertText);
-
-  /* Add loading text */
-
-  var loadingText = document.createElement("p");
-  loadingText.id = "loadingText";
-  body.appendChild(loadingText);
 
   // ************** Functions	 *****************
 
@@ -146,9 +145,9 @@ function myFunction(treeData, refreshMode) {
         width = width + (d.children.length-1)*180;   
       }
     }
-    setTreeSize();
     d3.select("svg").attr("width", width)
-       .attr("height", height)
+       .attr("height", height);
+    setTreeSize();
     update(root);
   }
 
@@ -171,17 +170,37 @@ function myFunction(treeData, refreshMode) {
     });
   }
 
-  /*Functions to handle the refreshing the graph */
+  /*Functions to handle the refreshing of the graph */
   function handleRefresh() {
-    document.getElementById("loadingText").innerHTML = "Loading...";
+    var refButt = document.getElementById("refresh");
+    refButt.innerHTML = "Loading...";
+    refButt.style.background = "grey";
+    refButt.style.cursor = "wait";
     refresh();
   }
   
+  /* sends a message to the extension to trigger the refreshing of the graph*/
   function refresh() {
+    console.log(startingPoint);
     vscode.postMessage({
       command: 'refresh',
-      text: "refresh",
+      text: vscode.getState().sp ? vscode.getState().sp : "App.js",
     });
+  }
+
+  function setStartingPoint() {
+    var subButt = document.getElementById("startingPointSubmit");
+    subButt.value = "Loading...";
+    subButt.style.background = "grey";
+    subButt.style.color = "white";
+    subButt.style.display = "inline";
+    subButt.style.cursor = "wait";
+    var sp = document.getElementById("startingPointName").value ? document.getElementById("startingPointName").value : "App.js";
+    vscode.postMessage({
+      command: 'refresh',
+      text: sp,
+    });
+    
   }
 
   /*function that adds a node and updates the graph accordingly*/
@@ -303,12 +322,35 @@ function myFunction(treeData, refreshMode) {
       x[i].style.display = "block";
     }
   }
+  // This function toggles the props under-menu
+  function toggleProps(d) {
+    propsOpen = !propsOpen;
+    myProps = d.props;
+    //console.log(propsOpen);
+    //console.log(JSON.stringify(myProps));
+    update(root);
+  }
+
+  // This function changees dynamically the "Props" title
+  function propsTextDecider(d) {
+    result = ""
+    if (d.on && d.props) {
+      if (propsOpen) {
+        result = "- PROPS"
+      } else {
+        result = "+ PROPS" + " (" + d.props.length + ")";
+      }
+    }
+    return result;
+  }
 
   function update(source) {
 
     // Removes the circular references which causes an error and then saves the new state
     var newSource = removeParent(source);
-    vscode.setState({src: newSource, height: height, width: width});
+    var sp = source.name + ".js";
+    console.log(sp);
+    vscode.setState({src: newSource, height: height, width: width, sp: sp});
   
     //remove everything there was before
     svg.selectAll("*").remove();
@@ -319,7 +361,7 @@ function myFunction(treeData, refreshMode) {
           .enter()
           .append("g")
             .attr("class", "legenda")
-            .attr("transform", function(d) {return "translate(" + -margin.left + "," + d.position*40 + ")"});
+            .attr("transform", function(d) {return "translate(" + 0 + "," + d.position*40 + ")"});
        
     legend.append("circle")
              .attr("r", 10)
@@ -335,6 +377,7 @@ function myFunction(treeData, refreshMode) {
     // Compute the new tree layout.
     var nodes = tree.nodes(source).reverse()
     nodes.forEach(function(d){ d.y = d.depth * 180});
+    //console.log(nodes[0].x);
     var links = tree.links(nodes);
   
     //Enter the node data and transform their positions
@@ -377,29 +420,49 @@ function myFunction(treeData, refreshMode) {
         .attr("transform", function(d) {return "translate(" + 15 + "," + 20 + ")";})
         .on("click", toggle)
         .style("cursor", "pointer");
-    // Text for the tag content
+    // Button to open the local file containing the tag
     node.append("text")
-        .text(function(d) {return d.on ? d.content : ""})
-        .attr("class", "nodeContent")
-        .attr("transform", function(d) {return "translate(" + 15 + "," + 36 + ")";});
+        .text(function(d) {return d.on ? "OPEN LOCAL FILE" : ""})
+        .attr("transform", function(d) {return "translate(" + 15 + "," + 36 + ")";})
+        .attr("class", "button")
+        .on("click", openDoc)
+    //Button to show outside documentation
+    var nodeLinks = node.append("a")
+        .attr("transform", function(d) {return "translate(" + 165 + "," + 36 + ")";})
+        .attr("xlink:href", defineURL);
+    nodeLinks.append("text")
+        .text(function(d) {return d.on ? "OPEN DOCUMENTATION" : ""})
+        .attr("class", "button")
     // Text for the tag ID
     node.append("text")
         .text(function(d) {return d.on ? "ID: " + d.id : ""})
         .attr("class", "nodeContent")
         .attr("transform", function(d) {return "translate(" + 15 + "," + 52 + ")";});
-    // Button to open the local file containing the tag
+    // Text for the tag content
     node.append("text")
-        .text(function(d) {return d.on ? "OPEN LOCAL FILE" : ""})
-        .attr("transform", function(d) {return "translate(" + 15 + "," + 68 + ")";})
-        .attr("class", "button")
-        .on("click", openDoc)
-    //Button to show outside documentation
-    var nodeLinks = node.append("a")
+        .text(function(d) {return d.on ? "CONTENT: " + d.content : ""})
+        .attr("class", "nodeContent")
+        .attr("transform", function(d) {return "translate(" + 15 + "," + 68 + ")";});
+    // Button to open Props
+    node.append("text")
+        .text(propsTextDecider)
+        .attr("class", "nodeContent")
         .attr("transform", function(d) {return "translate(" + 15 + "," + 84 + ")";})
-        .attr("xlink:href", defineURL);
-    nodeLinks.append("text")
-        .text(function(d) {return d.on ? "OPEN DOCUMENTATION" : ""})
-        .attr("class", "button")
+        .on("click", toggleProps)
+        .style("cursor", "pointer");
+    if (propsOpen === true && myProps) {
+
+      for (var i = 0; i < myProps.length; i++) {
+        var propLinks = node.append("a")
+        .attr("transform", function(d) {return "translate(" + 115 + "," + (84 + i*16) + ")";})
+        .attr("xlink:href", myProps[i].doc);
+        propLinks.append("text")
+          .text(myProps[i].name + ": " + myProps[i].value)
+          .attr("class", "prop")
+          .style("display", function(d) {return d.on ? "block" : "none"});
+      }
+
+    }
   
     var diagonal = d3.svg.diagonal();
   
@@ -513,15 +576,62 @@ function setCanvas() {
     .attr("height", height)
     .attr("display", "block")
     .append("g")
-    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+    .attr("transform", "translate(" + 0 + "," + margin.top + ")");
 }
 
 /* This function defines the size of the tree graph */
 function setTreeSize() {
   tree = d3.layout.tree()
-    .size([height, width]);
+    .size([width, height]);
   
   root.x = width / 2;
   root.y = 0;
+
+  //console.log("Root position: " + root.x + ", " + root.y);
   
 }
+
+function toggleStartingPointForm() {
+  if (!startingPointMod) {
+    var formInputs = document.getElementsByClassName("startingPointInput");
+    for (var e = 0; e < formInputs.length; e++) {
+      formInputs[e].style.display = "inline";
+    }
+    document.getElementById("spToggle").style.display = "none";
+  } else {
+    var formInputs = document.getElementsByClassName("startingPointInput");
+    for (var e = 0; e < formInputs.length; e++) {
+      formInputs[e].style.display = "none";
+    }
+    document.getElementById("spToggle").style.display = "inline";
+  }
+  startingPointMod = !startingPointMod;
+}
+
+var legenda = [
+  {
+    "name": "State Management",
+    "color": "red",
+    "position": 0,
+  },
+  {
+    "name": "Navigation",
+    "color": "yellow",
+    "position": 1,
+  },
+  {
+    "name": "React Native",
+    "color": "green",
+    "position": 2,
+  },
+  {
+    "name": "Other components",
+    "color": "black",
+    "position": 3,
+  },
+  {
+    "name": "User defined",
+    "color": "violet",
+    "position": 4,
+  }
+];
