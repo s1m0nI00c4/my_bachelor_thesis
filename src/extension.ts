@@ -199,15 +199,16 @@ class RNVPanel {
 		this._panel.webview.html = this._getHtmlForWebview(webview, myResult, false);
   }
   
-  private _getHtmlForWebview(webview: vscode.Webview, content: string, refresh: boolean) {
+  private _getHtmlForWebview(webview: vscode.Webview, content: string, refresh: boolean):string {
     
-    // Local path to main script run in the webview
+    // Local path to the main script run in the webview
 		const scriptPathOnDisk = vscode.Uri.file(
       path.join(this._extensionPath, 'media', 'script.js')
     );
 		// And the uri we use to load this script in the webview
     const scriptUri = webview.asWebviewUri(scriptPathOnDisk);
     
+    //Same as above but for the CSS file
     const cssPathOnDisk = vscode.Uri.file(
       path.join(this._extensionPath, 'media', 'treeStyle.css')
     );
@@ -226,7 +227,7 @@ class RNVPanel {
         <script src="${scriptUri}"></script>
         <h1>React Native Visualizer</h1>
         <script>
-          myFunction(${content}, ${refresh});
+          prepareView(${content}, ${refresh});
         </script>
       </body>
     </html>

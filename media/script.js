@@ -14,7 +14,7 @@ var startingPoint;
 var propsOpen = false;
 var myProps;
 
-function myFunction(treeData, refreshMode) {
+function prepareView(treeData, refreshMode) {
 
   // ************** Starting point	 *****************
 
@@ -326,6 +326,12 @@ function myFunction(treeData, refreshMode) {
   function toggleProps(d) {
     propsOpen = !propsOpen;
     myProps = d.props;
+    if (d.propsClicked) {
+      d.propsClicked = false;
+    } else {
+      d.propsClicked = true;
+
+    }
     //console.log(propsOpen);
     //console.log(JSON.stringify(myProps));
     update(root);
@@ -335,7 +341,7 @@ function myFunction(treeData, refreshMode) {
   function propsTextDecider(d) {
     result = ""
     if (d.on && d.props) {
-      if (propsOpen) {
+      if (propsOpen && d.propsClicked) {
         result = "- PROPS"
       } else {
         result = "+ PROPS" + " (" + d.props.length + ")";
@@ -457,9 +463,9 @@ function myFunction(treeData, refreshMode) {
         .attr("transform", function(d) {return "translate(" + 115 + "," + (84 + i*16) + ")";})
         .attr("xlink:href", myProps[i].doc);
         propLinks.append("text")
-          .text(myProps[i].name + ": " + myProps[i].value)
+          .text(myProps[i].name + ": " + myProps[i].value + " ↗")
           .attr("class", "prop")
-          .style("display", function(d) {return d.on ? "block" : "none"});
+          .style("display", function(d) {return (d.on && d.propsClicked) ? "block" : "none"});
       }
 
     }

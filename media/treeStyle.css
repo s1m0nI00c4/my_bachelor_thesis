@@ -25,14 +25,13 @@
   .prop {
     font: 10px sans-serif;
     fill: white;
-    text-decoration: underline;
+    text-decoration-line: underline;
     text-decoration-color: white;
     text-decoration-style: double;
-    text-decoration-thickness: 100;
   }
 
-  .legenda, .plus {
-    font: 12px sans-serif; 
+  .plus {
+    font: 16px sans-serif; 
     stroke: white;
   }
 

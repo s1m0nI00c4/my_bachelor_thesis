@@ -693,7 +693,7 @@ function compileProp(str: string, name: string): Props[] {
           propArr.push({
             name: propNameSearch[0],
             value: propValueSearch,
-            doc: "https://reactnative.dev/docs/" + name.toLowerCase() + "#" + propNameSearch[0],
+            doc: "https://reactnative.dev/docs/" + name.toLowerCase() + "#" + propNameSearch[0].toLowerCase(),
          })
        }
       if (length < propSearch[0].length) {
