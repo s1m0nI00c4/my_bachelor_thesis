@@ -61,6 +61,8 @@
 
   input {border: 1px dotted #ccc; background: white; font-family: monospace; padding: 10px 20px; font-size: 18px; margin: 20px 10px 20px 0; color: red; display: none;}
 
+  .addForm:first-child { width: 100px;}
+
   .startingPointInput {
     display: none;
   }
@@ -80,6 +82,13 @@
   .alert {
     display: none;
     color: red;
+  }
+
+  .cancelButton {
+    display: none;
+    color: grey;
+    text-decoration-line: underline;
+    cursor: pointer;
   }
 
    #loadingText {

@@ -8,6 +8,7 @@ width = 720 + margin.right + margin.left,
 height = 360 + margin.top + margin.bottom;
 var newChild = [];
 var displayMod = false;
+var editMod = false;
 var removeMod = false;
 var startingPointMod = false;
 var startingPoint;
@@ -69,9 +70,15 @@ function prepareView(treeData, refreshMode) {
 
   // ************** Add buttons *****************
 
+  /* Add addButton */
+  var addButton = document.createElement("button");
+  addButton.innerHTML = "Add node";
+  body.appendChild(addButton);
+  addButton.addEventListener("click", toggleAddMode);
+
   /* Add editButton */
   var editButton = document.createElement("button");
-  editButton.innerHTML = "Add node";
+  editButton.innerHTML = "Edit node";
   body.appendChild(editButton);
   editButton.addEventListener("click", toggleEditMode);
 
@@ -98,28 +105,39 @@ function prepareView(treeData, refreshMode) {
   thisForm.onsubmit = handleClick;
 
   var input1 = document.createElement("input");
-  input1.type = "text";
-  input1.id = "name";
-  input1.placeholder = "Node name";
+  input1.type = "number";
+  input1.id = "nodeID";
+  input1.classList = "addForm";
+  input1.placeholder = "Node ID";
   thisForm.appendChild(input1);
 
   var input2 = document.createElement("input");
   input2.type = "text";
-  input2.id = "content";
-  input2.placeholder = "Node content";
+  input2.id = "name";
+  input2.classList = "addForm";
+  input2.placeholder = "Node name";
   thisForm.appendChild(input2);
 
   var input3 = document.createElement("input");
-  input3.type = "number";
-  input3.id = "id";
-  input3.placeholder = "Node ID";
+  input3.type = "text";
+  input3.id = "content";
+  input3.classList = "addForm";
+  input3.placeholder = "Node content";
   thisForm.appendChild(input3);
 
   var input4 = document.createElement("input");
-  input4.type = "submit";
-  input4.id = "submit";
-  input4.value = "Add to graph";
+  input4.type = "text";
+  input4.id = "props";
+  input4.classList = "addForm";
+  input4.placeholder = "Props (separated by single space)";
   thisForm.appendChild(input4);
+
+  var input5 = document.createElement("input");
+  input5.type = "submit";
+  input5.id = "submit";
+  input5.classList = "addForm";
+  input5.value = "Add to graph";
+  thisForm.appendChild(input5);
 
   /* Add alert */
 
@@ -127,6 +145,14 @@ function prepareView(treeData, refreshMode) {
   alertText.classList = "alert";
   alertText.innerHTML = "Click on the blue plus to add your new node to the desired parent";
   body.appendChild(alertText);
+
+  /* Cancel button */
+
+  var cancelButton = document.createElement("p");
+  cancelButton.classList = "cancelButton";
+  cancelButton.innerHTML = "Cancel";
+  cancelButton.addEventListener("click", handleCancel);
+  body.appendChild(cancelButton);
 
   // ************** Functions	 *****************
 
@@ -234,9 +260,11 @@ function prepareView(treeData, refreshMode) {
     displayMod = false;       // We're not in editing mode anymore  
     var x = document.getElementsByClassName("alert");
     for (var i = 0; i < x.length; i++) {
+      x[i].innerHTML = "Click on the blue plus to add your new node to the desired parent";
       x[i].style.display = "none";
     }
     toggleButtons();
+    toggleCancel();
     update(root);             // We update the view 
   }
 
@@ -257,10 +285,73 @@ function prepareView(treeData, refreshMode) {
       })
     }
   }
+  /* Function to edit an existing node */
+
+  function toggleEditMode() {
+    toggleButtons();
+    toggleCancel();
+    editMod = !editMod;
+    var x = document.getElementsByClassName("alert");
+      for (var i = 0; i < x.length; i++) {
+        x[i].innerHTML = "Click on the blue E next to the node you wish to edit";
+        x[i].style.display = "block";
+      }
+      update(root);
+  }
+
+  function editNode(d) {
+    var x = document.getElementsByClassName("alert");
+    for (var i = 0; i < x.length; i++) {
+        x[i].innerHTML = "Click on the blue plus to add your new node to the desired parent";
+        x[i].style.display = "none";
+    }
+
+    toggleForm();
+
+    var y = document.getElementsByClassName("addForm");
+    for (var i = 0; i < y.length; i++) {
+      if (y[i].id === "nodeID") {
+        y[i].value = d.id;
+      } else if (y[i].id === "name") {
+        y[i].value = d.name;
+      } else if (y[i].id === "content") {
+        y[i].value = d.content;
+      } else if (y[i].id === "props") {
+        var result = "";
+        d.props.forEach(item => {
+          var propString = item.name + "=" + item.value + ", ";
+          result = result.concat(propString);
+        })
+        y[i].value = result;
+      }
+    }
+
+  }
+
+  function traverseToEdit(current) {
+    if (current.id === newChild[0].id) {
+      current.name = newChild[0].name;
+      current.content = newChild[0].content;
+      current.props = newChild[0].props;
+      newChild = [];
+    } else {
+      if (current.children) {
+        current.children.forEach(item => {
+          traverseToEdit(item);
+        })
+      } else if (current._children) {
+        current._children.forEach(item => {
+          traverseToEdit(item);
+        })
+      }
+    }
+
+  }
 
   /*function that opens the remove modality*/
   function toggleRemoveMode() {
     removeMod = !removeMod;
+    toggleCancel();
     update(root);
     
   }
@@ -302,26 +393,91 @@ function prepareView(treeData, refreshMode) {
 
   /* This function handles the submission of the form containing information about the new node*/
   function handleClick() {
+    childProps = document.getElementById("props").value ? document.getElementById("props").value : "";
+    cpArr = childProps.split(',');
+    var propArr = [];
+    if (cpArr) {
+      cpArr.forEach(item => {
+        elements = item.split('=');
+        if (elements.length === 2) {
+          propArr.push({
+            name: elements[0],
+            value: elements[1]
+          })
+        }
+
+      })
+    }
     newChild = [];
     newChild.push({
       name: document.getElementById("name").value ? document.getElementById("name").value : "New name",
       content: document.getElementById("content").value ? document.getElementById("content").value : "New content",
-      id: document.getElementById("id").value ? document.getElementById("id").value : 0,
+      id: document.getElementById("nodeID").value ? document.getElementById("nodeID").value : 0,
       type: "User defined",
       origin: "user-defined",
       children: [],
       _children: [],
+      props: propArr,
       myUri: null,
       on: false
     })
-    displayMod = true;    //now we need to decide where to add our new node
-    update(root); //we update the SVG
-    toggleForm();         //we hide the form
-    var x = document.getElementsByClassName("alert");
-    for (var i = 0; i < x.length; i++) {
-      x[i].style.display = "block";
+
+    if (editMod) { // then we're in Edit Mode
+    editMod = !editMod;
+    traverseToEdit(root);
+    toggleForm();
+    toggleButtons();
+    toggleCancel();
+    update(root);
+
+    } else {       // then we're in Adding Mode
+      displayMod = true;                                //now we need to decide where to add our new node
+      toggleForm();                                     //we hide the form 
+      var x = document.getElementsByClassName("alert"); //we show the alert
+      for (var i = 0; i < x.length; i++) {
+        x[i].style.display = "block";
+      }
+      update(root);
     }
   }
+
+  /* Function associated with cancel button */
+
+  function handleCancel() {
+    if (removeMod === true) {
+      removeMod = false;
+    }
+    if (displayMod === true) {
+      displayMod = false;
+      toggleButtons();
+    }
+    if (editMod === true) {
+      editMod = false;
+      toggleButtons();
+    }
+    var x = document.getElementsByClassName("alert");
+      for (var i = 0; i < x.length; i++) {
+        x[i].style.display = "none";
+      }
+    var y = document.getElementsByClassName("addForm");
+    if (y[0].style.display === "inline") {               //If the addForm is displayed, hide it and show the buttons again
+      for (var i = 0; i < y.length; i++) {
+        y[i].style.display = "none";
+      }
+      form = !form;
+      console.log("IN");
+      var z = document.getElementsByTagName("Button");
+      for (var e = 0; e < z.length; e++) {
+        if (z[e].style.display === "none") {
+          z[e].style.display = "inline";
+        } 
+      }
+    }
+    toggleCancel();
+    update(root);
+  }
+
+
   // This function toggles the props under-menu
   function toggleProps(d) {
     propsOpen = !propsOpen;
@@ -409,6 +565,12 @@ function prepareView(treeData, refreshMode) {
         .attr("transform", function(d) {return "translate(" + -30 + "," + 8 + ")";})
         .style("display", function() {return displayMod ? "block" : "none"});
     node.append("text")
+        .text("E")
+        .attr("class", "plusButton")
+        .on("click", editNode)
+        .attr("transform", function(d) {return "translate(" + -30 + "," + 8 + ")";})
+        .style("display", function() {return editMod ? "block" : "none"});
+    node.append("text")
         .text("x")
         .attr("class", "xButton")
         .on("click", removeNode)
@@ -434,7 +596,7 @@ function prepareView(treeData, refreshMode) {
         .on("click", openDoc)
     //Button to show outside documentation
     var nodeLinks = node.append("a")
-        .attr("transform", function(d) {return "translate(" + 165 + "," + 36 + ")";})
+        .attr("transform", function(d) {return "translate(" + 15 + "," + 52 + ")";})
         .attr("xlink:href", defineURL);
     nodeLinks.append("text")
         .text(function(d) {return d.on ? "OPEN DOCUMENTATION" : ""})
@@ -443,25 +605,25 @@ function prepareView(treeData, refreshMode) {
     node.append("text")
         .text(function(d) {return d.on ? "ID: " + d.id : ""})
         .attr("class", "nodeContent")
-        .attr("transform", function(d) {return "translate(" + 15 + "," + 52 + ")";});
+        .attr("transform", function(d) {return "translate(" + 15 + "," + 68 + ")";});
     // Text for the tag content
     node.append("text")
         .text(function(d) {return d.on ? "CONTENT: " + d.content : ""})
         .attr("class", "nodeContent")
-        .attr("transform", function(d) {return "translate(" + 15 + "," + 68 + ")";});
+        .attr("transform", function(d) {return "translate(" + 15 + "," + 84 + ")";});
     // Button to open Props
     node.append("text")
         .text(propsTextDecider)
         .attr("class", "nodeContent")
-        .attr("transform", function(d) {return "translate(" + 15 + "," + 84 + ")";})
+        .attr("transform", function(d) {return "translate(" + 15 + "," + 100 + ")";})
         .on("click", toggleProps)
         .style("cursor", "pointer");
     if (propsOpen === true && myProps) {
 
       for (var i = 0; i < myProps.length; i++) {
         var propLinks = node.append("a")
-        .attr("transform", function(d) {return "translate(" + 115 + "," + (84 + i*16) + ")";})
-        .attr("xlink:href", myProps[i].doc);
+        .attr("transform", function(d) {return "translate(" + 115 + "," + (100 + i*16) + ")";})
+        .attr("xlink:href", function(d) {return myProps[i].doc ? myProps[i].doc : ""});
         propLinks.append("text")
           .text(myProps[i].name + ": " + myProps[i].value + " ↗")
           .attr("class", "prop")
@@ -526,20 +688,24 @@ function defineURL(d) {
 // method to show/hide the form for adding a new node. Gets shown when someone clicks on the relative button. Gets hidden as soon as someone submits the form.
 
 function toggleForm() {
-  var x = document.getElementsByTagName("Input");
+  var x = document.getElementsByClassName("addForm");
   for (var i = 0; i < x.length; i++) {
     if (form === false) {
       x[i].style.display = "inline";
     } else {
       x[i].style.display = "none";
     }
+    if (x[i].type != "submit") {
+      x[i].value='';
+    }
   }
   form = !form;
 } 
 
-function toggleEditMode() {
+function toggleAddMode() {
   toggleButtons();
   toggleForm();
+  toggleCancel();
 }
 
 function toggleButtons() {
@@ -549,6 +715,19 @@ function toggleButtons() {
       x[i].style.display = "inline";
     } else {
       x[i].style.display = "none";
+    }
+  }
+}
+
+function toggleCancel() {
+  var x = document.getElementsByClassName("cancelButton");
+  console.log(x.length);
+  console.log(x[0].style.display);
+  for (var i = 0; i < x.length; i++) {
+    if (x[i].style.display === "block") {
+      x[i].style.display = "none";
+    } else {
+      x[i].style.display = "block";
     }
   }
 }
