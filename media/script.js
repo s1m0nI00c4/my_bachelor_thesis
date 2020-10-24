@@ -12,7 +12,6 @@ var editMod = false;
 var removeMod = false;
 var startingPointMod = false;
 var startingPoint;
-var propsOpen = false;
 var myProps;
 
 function prepareView(treeData, refreshMode) {
@@ -45,6 +44,12 @@ function prepareView(treeData, refreshMode) {
   input6.value = "Submit";
   input6.classList = "startingPointInput";
   SPForm.appendChild(input6);
+
+  var spCancel = document.createElement("p");
+  spCancel.innerHTML = "Cancel";
+  spCancel.id = "spCancel";
+  body.appendChild(spCancel);
+  spCancel.onclick = toggleStartingPointForm;
 
   // ************** Generate the tree diagram	 *****************
 
@@ -480,12 +485,10 @@ function prepareView(treeData, refreshMode) {
 
   // This function toggles the props under-menu
   function toggleProps(d) {
-    propsOpen = !propsOpen;
-    myProps = d.props;
-    if (d.propsClicked) {
-      d.propsClicked = false;
+    if (d.propsOpen) {
+      d.propsOpen = false;
     } else {
-      d.propsClicked = true;
+      d.propsOpen = true;
 
     }
     //console.log(propsOpen);
@@ -497,12 +500,21 @@ function prepareView(treeData, refreshMode) {
   function propsTextDecider(d) {
     result = ""
     if (d.on && d.props) {
-      if (propsOpen && d.propsClicked) {
+      if (d.propsOpen) {
         result = "- PROPS"
       } else {
         result = "+ PROPS" + " (" + d.props.length + ")";
       }
     }
+    return result;
+  }
+
+  function nameDecider(d) {
+    var result = d.name;
+    if (d._children) {
+      result += " (" + d._children.length + ")";
+    }
+
     return result;
   }
 
@@ -537,14 +549,14 @@ function prepareView(treeData, refreshMode) {
              .attr("transform", function(d) {return "translate(" + 15 + "," + 4 + ")";});
   
     // Compute the new tree layout.
-    var nodes = tree.nodes(source).reverse()
+    var nodes = tree.nodes(source);
     nodes.forEach(function(d){ d.y = d.depth * 180});
     //console.log(nodes[0].x);
     var links = tree.links(nodes);
   
     //Enter the node data and transform their positions
     var node = svg.selectAll(".node")
-                  .data(nodes.reverse())
+                  .data(nodes)
                   .enter()
                   .append("g")
                     .attr("class", "node")
@@ -578,7 +590,7 @@ function prepareView(treeData, refreshMode) {
         .style("display", function() {return removeMod ? "block" : "none"});
     // Node name
     node.append("text")
-        .text(function(d) {return d.name})
+        .text(nameDecider)
         .attr("class", "nodeName")
         .attr("transform", function(d) {return "translate(" + 15 + "," + 4 + ")";});
     // +/- symbol which hides/shows the node's details
@@ -618,19 +630,30 @@ function prepareView(treeData, refreshMode) {
         .attr("transform", function(d) {return "translate(" + 15 + "," + 100 + ")";})
         .on("click", toggleProps)
         .style("cursor", "pointer");
-    if (propsOpen === true && myProps) {
 
-      for (var i = 0; i < myProps.length; i++) {
-        var propLinks = node.append("a")
-        .attr("transform", function(d) {return "translate(" + 115 + "," + (100 + i*16) + ")";})
-        .attr("xlink:href", function(d) {return myProps[i].doc ? myProps[i].doc : ""});
-        propLinks.append("text")
-          .text(myProps[i].name + ": " + myProps[i].value + " ↗")
-          .attr("class", "prop")
-          .style("display", function(d) {return (d.on && d.propsClicked) ? "block" : "none"});
+
+    nodes.forEach(function(myNode){
+      console.log(myNode.id);
+      var counter = 0;
+      if (!myNode.props) {
+        n.props = [];
       }
-
-    }
+      var propGroups = svg.selectAll(".propLinks")
+                       .data(myNode.props)
+                       .enter()
+                       .append("g")
+                       //.attr("class", "propLinks")
+                       .attr("transform", function() {return "translate(" + (myNode.x + 115) + "," + (myNode.y + 100 + 16*counter++) + ")";})
+      var propLinks = propGroups.append("a")
+                                .attr("xlink:href", function(d) {return d.doc ? d.doc : ""})
+                                .attr("class", "prop")
+                                .style("display", function() {return myNode.on && myNode.propsOpen ? "block" : "none"});
+      var propTexts = propLinks.append("text")
+                               .text(function(d) {return d.name + ": " + d.value + " ↗"})
+                               .attr("class", "prop")
+                               .style("display", function() {return myNode.on && myNode.propsOpen ? "block" : "none"});
+    })
+      
   
     var diagonal = d3.svg.diagonal();
   
@@ -783,12 +806,14 @@ function toggleStartingPointForm() {
       formInputs[e].style.display = "inline";
     }
     document.getElementById("spToggle").style.display = "none";
+    document.getElementById("spCancel").style.display = "block";
   } else {
     var formInputs = document.getElementsByClassName("startingPointInput");
     for (var e = 0; e < formInputs.length; e++) {
       formInputs[e].style.display = "none";
     }
     document.getElementById("spToggle").style.display = "inline";
+    document.getElementById("spCancel").style.display = "none";
   }
   startingPointMod = !startingPointMod;
 }
